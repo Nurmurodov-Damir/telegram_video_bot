@@ -397,7 +397,7 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                             if translated_desc and translated_desc != description:
                                 subtitle_info += f"\n\n🔄 Tarjima:\n{translated_desc[:300]}{'...' if len(translated_desc) > 300 else ''}"
                         except Exception as e:
-                            logger.error(f"Tarjima xatosi: {str(e)}"
+                            logger.error(f"Tarjima xatosi: {str(e)}")
 
             # Subtitle ma'lumotini captionga qo'shish
             if subtitle_info:
