@@ -93,6 +93,14 @@ def get_platform_button_text(platform):
     }
     return buttons.get(platform, 'Video')
 
+def check_ffmpeg_available():
+    """FFmpeg mavjudligini tekshirish."""
+    try:
+        import shutil
+        return shutil.which('ffmpeg') is not None
+    except:
+        return False
+
 def sanitize_filename(filename):
     """Fayl nomini tozalash - maxsus belgilarni olib tashlash."""
     import re
