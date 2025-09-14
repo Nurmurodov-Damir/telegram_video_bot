@@ -227,6 +227,8 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             },
             'sleep_interval': 1,
             'max_sleep_interval': 5,
+            # YouTube bot tekshiruvini o'tkazish uchun cookies fayli
+            'cookies': 'cookies.txt',  # cookies.txt faylini bir xil katalogga joylashtiring
         }
         
         # FFmpeg mavjudligini tekshirish va opsiyalar qo'shish
@@ -337,6 +339,15 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                     "Kechirasiz, men bu saytdan yuklab olishni qo'llab-quvvatlamayman.\n"
                     "Men YouTube, Vimeo, Twitter, Instagram, TikTok va minglab boshqa saytlarni qo'llab-quvvatlayman."
                 )
+        elif 'Sign in to confirm you\'re not a bot' in error_msg:
+            await progress_message.edit_text(
+                "❌ YouTube bot tekshiruvi aniqlandi!\n\n"
+                "💡 Yechimlar:\n"
+                "1. Boshqa video manbasi tanlang\n"
+                "2. Administrator cookies.txt faylini yangilashini so'rang\n"
+                "3. Video manzilini tekshirib ko'ring\n\n"
+                "📢 Bu YouTube tomonidan avtomatik yuklab olishni cheklash uchun qo'llaniladigan xavfsizlik chorasi."
+            )
         else:
             await progress_message.edit_text(
                 f"Kechirasiz, men videoni yuklab ololmadim.\n"
