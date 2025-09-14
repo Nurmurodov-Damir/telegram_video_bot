@@ -13,11 +13,10 @@ from dotenv import load_dotenv
 # .env faylini yuklash
 load_dotenv()
 
-# pylint: disable=import-error
-import yt_dlp  # Bu paket o'rnatilgandan so'ng hal etiladi
+import yt_dlp
 
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
+from telegram import Update
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
 # Jurnalni yoqish
 logging.basicConfig(
@@ -31,8 +30,8 @@ DOWNLOADS_DIR = os.getenv("DOWNLOAD_DIR", "downloads")
 if not os.path.exists(DOWNLOADS_DIR):
     os.makedirs(DOWNLOADS_DIR)
 
-# Foydalanuvchi so'rovlarini saqlash
-user_requests = {}
+# Foydalanuvchi so'rovlarini saqlash (kelajakda ishlatish uchun)
+# user_requests = {}
 
 # Buyruq handlerlarini belgilash
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -95,36 +94,7 @@ async def about_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     if update.message:
         await update.message.reply_text(about_text, parse_mode='Markdown')
 
-class ProgressLogger:
-    """Telegramda jarayonni yangilash uchun maxsus jurnal."""
-    def __init__(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        self.update = update
-        self.context = context
-        self.progress_message = None
-
-    def debug(self, msg):
-        """Disk raskadrovka xabarlarini qayta ishlash."""
-        if msg.startswith('[download]'):
-            # Jarayon ma'lumotlarini ajratib olish
-            if 'Destination' in msg:
-                # Synchronous approach to avoid coroutine issues
-                pass  # We'll handle progress updates in the main download function
-            elif '%' in msg and self.progress_message:
-                # Jarayonni yangilash
-                progress_text = msg.split('[download]')[1].strip()
-                # We can't directly call async methods from sync context, so we'll skip this for now
-
-    def info(self, msg):
-        """Ma'lumot xabarlarini qayta ishlash."""
-        pass
-
-    def warning(self, msg):
-        """Ogohlantirish xabarlarini qayta ishlash."""
-        pass
-
-    def error(self, msg):
-        """Xato xabarlarini qayta ishlash."""
-        logger.error(f"yt-dlp xatosi: {msg}")
+# ProgressLogger sinfi olib tashlandi - ishlatilmayapti
 
 async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """URL manzildan video yuklab olish va foydalanuvchiga yuborish."""
@@ -148,7 +118,6 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         ydl_opts = {
             'outtmpl': os.path.join(DOWNLOADS_DIR, f'{user.id}_%(title)s.%(ext)s'),
             'format': 'best[height<=720][filesize<50M]/best[filesize<50M]/best',  # More flexible format selection
-            'logger': ProgressLogger(update, context),
         }
         
         # FFmpeg mavjudligini tekshirish va opsiyalar qo'shish

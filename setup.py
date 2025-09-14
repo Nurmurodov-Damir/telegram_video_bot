@@ -39,7 +39,7 @@ setup(
     install_requires=requirements,
     entry_points={
         "console_scripts": [
-            "telegram-video-bot=bot:main",
+            "telegram-video-bot=src.bot:main",
         ],
     },
 )

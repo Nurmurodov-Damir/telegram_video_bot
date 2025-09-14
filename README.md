@@ -43,31 +43,6 @@ Yoki bevosita:
 python src/bot.py
 ```
 
-## Avtomatik Gitga Yuklash
-
-Loyihani avtomatik tarzda Gitga yuklash uchun quyidagi usullardan birini ishlating:
-
-### Windows uchun
-
-1. `deploy.ps1` skriptini ishga tushiring:
-   ```powershell
-   .\deploy.ps1
-   ```
-
-2. Yoki `auto_deploy.bat` faylini ikki marta bosing
-
-### Linux/Mac uchun
-
-1. `deploy.py` skriptini ishga tushiring:
-   ```bash
-   python deploy.py
-   ```
-
-2. Yoki `setup_and_deploy.py` skriptini ishga tushiring:
-   ```bash
-   python setup_and_deploy.py
-   ```
-
 ## Qo'llab-quvvatlanadigan platformalar
 
 - YouTube

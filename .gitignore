@@ -1,12 +1,8 @@
-# Bayt-kompilyatsiya qilingan / optimallashtirilgan / DLL fayllar
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
-
-# C kengaytmalari
 *.so
-
-# Tarqatish / paketlash
 .Python
 build/
 develop-eggs/
@@ -26,80 +22,60 @@ wheels/
 MANIFEST
 
 # PyInstaller
-#  Odatda bu fayllar shablonlardan Python skripti tomonidan yoziladi
-#  PyInstaller exe faylini qurishdan oldin sana/boshqa ma'lumotlarni kiritish uchun.
 *.manifest
 *.spec
 
-# O'rnatuvchi jurnallar
+# Installer logs
 pip-log.txt
 pip-delete-this-directory.txt
 
-# Birlik test / qoplamalar hisobotlari
+# Unit test / coverage reports
 htmlcov/
 .tox/
-.nox/
 .coverage
 .coverage.*
 .cache
 nosetests.xml
 coverage.xml
 *.cover
-*.py,cover
 .hypothesis/
 .pytest_cache/
 
-# Tarjimalar
+# Translations
 *.mo
 *.pot
 
-# Django narsalari:
+# Django stuff:
 *.log
 local_settings.py
 db.sqlite3
-db.sqlite3-journal
 
-# Flask narsalari:
+# Flask stuff:
 instance/
 .webassets-cache
 
-# Scrapy narsalari:
+# Scrapy stuff:
 .scrapy
 
-# Sphinx hujjatlari
+# Sphinx documentation
 docs/_build/
 
 # PyBuilder
 target/
 
-# Jupyter Daftar
+# Jupyter Notebook
 .ipynb_checkpoints
-
-# IPython
-profile_default/
-ipython_config.py
 
 # pyenv
 .python-version
 
-# pipenv
-#   Pypa/pipenv#598 ga ko'ra, Pipfile.lock versiyasini versiya nazoratiga kiritish tavsiya etiladi.
-#   Biroq, hamkorlikda, agar platformaga xos bog'liqliklar yoki bog'liqliklar bo'lsa
-#   umumiy qo'llab-quvvatlash yo'q, pipenv noto'g'ri ishlaydigan bog'liqliklarni o'rnatishi mumkin,
-#   yoki barcha kerakli bog'liqliklarni o'rnatmasligi mumkin.
-#Pipfile.lock
-
-# PEP 582; masalan, github.com/David-OConnor/pyflow va github.com/pdm-project/pdm tomonidan foydalaniladi
-__pypackages__/
-
-# Celery narsalari
+# celery beat schedule file
 celerybeat-schedule
-celerybeat.pid
 
-# SageMath tahlil qilingan fayllar
+# SageMath parsed files
 *.sage.py
 
-# Muhitlar
+# Environments
 .env
 .venv
 env/
@@ -108,14 +84,14 @@ ENV/
 env.bak/
 venv.bak/
 
-# Spyder loyiha sozlamalari
+# Spyder project settings
 .spyderproject
 .spyproject
 
-# Rope loyiha sozlamalari
+# Rope project settings
 .ropeproject
 
-# mkdocs hujjatlari
+# mkdocs documentation
 /site
 
 # mypy
@@ -123,23 +99,24 @@ venv.bak/
 .dmypy.json
 dmypy.json
 
-# Pyre tur tekshirgichi
-.pyre/
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
 
-# pytype
-.pytype/
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 
-# Cython disk raskadrovka belgilari
-cython_debug/
-
-# PyCharm
-#  JetBrains maxsus shabloni JetBrains.gitignore da saqlanadi, u
-#  github.com/github/gitignore da topish mumkin
-#  va global gitignore ga qo'shish yoki ushbu faylga birlashtirish mumkin.  Yanada nuklear uchun
-#  opsiya (tavsiya etilmaydi) quyidagini izohlash mumkin.
-#.idea/
-
-# Video fayllar
+# Bot specific
+downloads/
 *.mp4
 *.avi
 *.mkv
@@ -147,9 +124,12 @@ cython_debug/
 *.wmv
 *.flv
 *.webm
-*.mpg
-*.mpeg
-*.3gp
+*.m4v
 
-# Vaqtinchalik yuklab olish katalogi
-downloads/
+# Logs
+*.log
+logs/
+
+# Temporary files
+temp/
+tmp/

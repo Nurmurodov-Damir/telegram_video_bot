@@ -21,8 +21,7 @@ def test_imports():
         return False
     
     try:
-        # pylint: disable=import-error
-        import yt_dlp  # Bu paket o'rnatilgandan so'ng hal etiladi
+        import yt_dlp
         print("✓ yt_dlp moduli muvaffaqiyatli import qilindi")
     except ImportError as e:
         print(f"✗ yt_dlp import qilishda xatolik: {e}")

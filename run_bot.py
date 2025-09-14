@@ -22,7 +22,6 @@ def check_requirements():
     """Talablarni tekshirish."""
     try:
         import telegram
-        # pylint: disable=import-error
         import yt_dlp
         import dotenv
         print("✓ Barcha kerakli kutubxonalar mavjud")
