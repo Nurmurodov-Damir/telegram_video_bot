@@ -16,12 +16,12 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
 setup(
     name="telegram-video-bot",
     version="1.0.0",
-    author="Ochiq Manba Dasturchi",
-    author_email="opensource@example.com",
+    author="N.Damir",
+    author_email="nurmurodov.damir@example.com",
     description="Turli platformalardan videolarni yuklab oladigan Telegram boti",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/your-username/telegram-video-bot",
+    url="https://github.com/Nurmurodov-Damir/telegram_video_bot",
     packages=find_packages(where="src"),
     package_dir={"": "src"},
     classifiers=[

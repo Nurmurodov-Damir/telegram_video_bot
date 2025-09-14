@@ -86,7 +86,7 @@ async def about_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         "• python-telegram-bot\n"
         "• yt-dlp\n\n"
         "👨‍💻 *Ishlab chiquvchi:*\n"
-        "Ochiq manba loyihasi\n\n"
+        "N.Damir - Senior Dasturchi\n\n"
         "🔒 *Maxfiylik:*\n"
         "Hech qanday video yoki shaxsiy ma'lumot serverlarimizda saqlanmaydi.\n"
         "Barcha qayta ishlash vaqtinchalik amalga oshiriladi va fayllar yuborilgandan so'ng o'chirib tashlanadi."

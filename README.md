@@ -1,5 +1,7 @@
 # Telegram Video Download Bot
 
+**Muallif:** N.Damir - Senior Dasturchi
+
 Ushbu Telegram bot foydalanuvchilarga URL manzilini yuborish orqali turli platformalardan videolarni yuklab olish imkonini beradi.
 
 ## Xususiyatlari
