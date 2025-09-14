@@ -93,13 +93,20 @@ def get_platform_button_text(platform):
     }
     return buttons.get(platform, 'Video')
 
-def check_ffmpeg_available():
-    """FFmpeg mavjudligini tekshirish."""
-    try:
-        import shutil
-        return shutil.which('ffmpeg') is not None
-    except:
-        return False
+def sanitize_filename(filename):
+    """Fayl nomini tozalash - maxsus belgilarni olib tashlash."""
+    import re
+    import os as os_module
+    
+    # Fayl nomidan maxsus belgilarni olib tashlash
+    clean_name = re.sub(r'[<>:"/\|?*\x00-\x1f]', '_', filename)
+    # Ko'p bo'shliqlarni bittaga qisqartirish
+    clean_name = re.sub(r'\s+', ' ', clean_name).strip()
+    # Fayl nomi juda uzun bo'lsa, qisqartirish
+    if len(clean_name) > 150:
+        clean_name = clean_name[:150]
+    
+    return clean_name
 
 def extract_audio_from_video(video_path):
     """Videodan audio ajratib olish."""
@@ -344,6 +351,7 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         # yt-dlp opsiyalarini sozlash
         ydl_opts = {
             'outtmpl': os.path.join(DOWNLOADS_DIR, f'{user.id}_%(title)s.%(ext)s'),
+            'restrictfilenames': True,  # Fayl nomlarini cheklash
             'format': 'best[height<=720]/best[height<=480]/best',
             'sleep_interval': 1,
             'max_sleep_interval': 5,
@@ -501,6 +509,28 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                     info_dict = ydl.extract_info(url, download=True)
                     video_filename = ydl.prepare_filename(info_dict)
                     logger.info(f"Video muvaffaqiyatli yuklab olindi: {video_filename}")
+                    
+                    # Fayl nomini tozalash (agar kerak bo'lsa)
+                    import os as os_module
+                    if os_module.path.exists(video_filename):
+                        # Tozalangan fayl nomini yaratish
+                        dir_name = os_module.path.dirname(video_filename)
+                        base_name = os_module.path.basename(video_filename)
+                        name, ext = os_module.path.splitext(base_name)
+                        
+                        # Fayl nomini tozalash
+                        clean_name = sanitize_filename(name)
+                        clean_filename = os_module.path.join(dir_name, f"{clean_name}{ext}")
+                        
+                        # Agar fayl nomi o'zgargan bo'lsa, faylni qayta nomlash
+                        if clean_filename != video_filename:
+                            try:
+                                os_module.rename(video_filename, clean_filename)
+                                video_filename = clean_filename
+                                logger.info(f"Fayl nomi tozalandi: {video_filename}")
+                            except Exception as e:
+                                logger.error(f"Fayl nomini tozalashda xatolik: {str(e)}")
+                                # Xatolik yuz bersa, original fayl nomidan foydalanamiz
                 download_success = True
             except yt_dlp.DownloadError as e:
                 attempt += 1
