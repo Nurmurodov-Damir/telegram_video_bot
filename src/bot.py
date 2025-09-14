@@ -43,10 +43,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             "Men turli platformalardan videolarni yuklab olishga yordam beradigan video yuklab olish botiman.\n\n"
             "📥 Menga video URL manzilini yuboring va men uni siz uchun yuklab olaman.\n"
             "✅ Qo'llab-quvvatlanadigan platformalar: YouTube, Vimeo, Twitter, Instagram, TikTok va minglab boshqalar!\n\n"
-            "⚠️ Eslatma: Telegram cheklovlari tufayli men faqat 50MB gacha bo'lgan videolarni yuklab olaman."
+            "⚠️ Eslatma: Telegram cheklovlari tufayli men faqat 50MB gacha bo'lgan videolarni yuklab olaman.\n\n"
+            "👨‍💻 _Dastur muallifi: N.Damir - Senior Dasturchi_"
         )
         if update.message:
-            await update.message.reply_text(welcome_message)
+            await update.message.reply_text(welcome_message, parse_mode='Markdown')
     else:
         if update.message:
             await update.message.reply_text("Foydalanuvchi ma'lumotlarini olish imkonsiz.")
