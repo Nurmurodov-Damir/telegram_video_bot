@@ -249,6 +249,14 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             ydl_opts['writesubtitles'] = True
             ydl_opts['writeautomaticsub'] = True
             ydl_opts['subtitleslangs'] = ['en', 'ru', 'uz', 'all']
+            # Instagram uchun maxsus sozlamalar
+            ydl_opts['extractor_args'] = {
+                'instagram': {
+                    'api': 'web',
+                    'include_ads': False,
+                    'include_paid_promotion': False,
+                }
+            }
         
         # Jarayonni yangilash
         await progress_message.edit_text(f"{platform_sticker} Video tahlil qilinmoqda...")
@@ -262,6 +270,13 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                     "Iltimos, URL manzil to'g'ri ekanligini tekshiring."
                 )
                 return
+                
+            # Debug uchun ma'lumotlarni log qilish
+            logger.info(f"Video info keys: {list(info_dict.keys())}")
+            if 'instagram.com' in url:
+                logger.info(f"Instagram video info - description: {info_dict.get('description', 'No description')}")
+                logger.info(f"Instagram video info - subtitles: {info_dict.get('subtitles', 'No subtitles')}")
+                logger.info(f"Instagram video info - automatic_captions: {info_dict.get('automatic_captions', 'No auto captions')}")
                 
             video_title = info_dict.get('title', 'video')
             video_duration = info_dict.get('duration', 0)
@@ -317,7 +332,31 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             
             # Subtitle mavjudligini tekshirish va tarjima qilish
             subtitle_info = ""
-            if info_dict.get('subtitles') or info_dict.get('automatic_captions'):
+            
+            # Instagram uchun maxsus caption tekshiruvi
+            if 'instagram.com' in url or 'instagr.am' in url:
+                # Instagram captionlarini tekshirish
+                if info_dict.get('description'):
+                    instagram_caption = info_dict.get('description', '')
+                    if instagram_caption and len(instagram_caption) > 0:
+                        subtitle_info += "\n\n📢 Instagram Caption:\n"
+                        # Caption uzunligini cheklash
+                        if len(instagram_caption) > 300:
+                            subtitle_info += instagram_caption[:300] + "..."
+                        else:
+                            subtitle_info += instagram_caption
+                        
+                        # Agar tarjima mavjud bo'lsa
+                        if TRANSLATION_AVAILABLE:
+                            try:
+                                translated_caption = translate_text(instagram_caption, 'uz')
+                                if translated_caption and translated_caption != instagram_caption:
+                                    subtitle_info += f"\n\n🔄 Tarjima:\n{translated_caption[:300]}{'...' if len(translated_caption) > 300 else ''}"
+                            except Exception as e:
+                                logger.error(f"Tarjima xatosi: {str(e)}")
+            
+            # Boshqa platformalar uchun subtitle tekshiruvi
+            elif info_dict.get('subtitles') or info_dict.get('automatic_captions'):
                 subtitle_info += "\n\n📢 Subtitles:\n"
                 subtitles = info_dict.get('subtitles', {})
                 auto_captions = info_dict.get('automatic_captions', {})
@@ -339,6 +378,26 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                                 subtitle_info += f"\n🔄 Tarjima:\n{translated_desc[:200]}{'...' if len(translated_desc) > 200 else ''}"
                     except Exception as e:
                         logger.error(f"Tarjima xatosi: {str(e)}")
+            
+            # Umumiy description mavjud bo'lsa (boshqa platformalar uchun)
+            elif info_dict.get('description'):
+                description = info_dict.get('description', '')
+                if description and len(description) > 0:
+                    subtitle_info += "\n\n📢 Video Description:\n"
+                    # Description uzunligini cheklash
+                    if len(description) > 300:
+                        subtitle_info += description[:300] + "..."
+                    else:
+                        subtitle_info += description
+                    
+                    # Agar tarjima mavjud bo'lsa
+                    if TRANSLATION_AVAILABLE:
+                        try:
+                            translated_desc = translate_text(description, 'uz')
+                            if translated_desc and translated_desc != description:
+                                subtitle_info += f"\n\n🔄 Tarjima:\n{translated_desc[:300]}{'...' if len(translated_desc) > 300 else ''}"
+                        except Exception as e:
+                            logger.error(f"Tarjima xatosi: {str(e)}"
 
             # Subtitle ma'lumotini captionga qo'shish
             if subtitle_info:
