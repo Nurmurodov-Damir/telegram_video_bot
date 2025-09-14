@@ -1,0 +1,7 @@
+# HTTP Cookie File downloaded with cookies.txt by Genuinous @genuinous
+# This file can be used by curl, wget, aria2c, youtube-dl, yt-dlp and other tools
+# Lines beginning with # are comments and ignored by tools
+# Lines beginning with #HttpOnly_ are httpOnly cookies and ignored by tools
+# Empty lines are ignored by tools
+# To download cookies.txt, go to https://github.com/genuinous/cookies.txt
+# For more information, see https://github.com/genuinous/cookies.txt/blob/main/README.md

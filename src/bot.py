@@ -447,7 +447,8 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 "1. Boshqa video manbasi tanlang\n"
                 "2. Administrator cookies.txt faylini yangilashini so'rang\n"
                 "3. Video manzilini tekshirib ko'ring\n\n"
-                "📢 Bu YouTube tomonidan avtomatik yuklab olishni cheklash uchun qo'llaniladigan xavfsizlik chorasi."
+                "📢 YouTube hozirda avtomatik yuklab olishni cheklamoqda. "
+                "Bu xavfsizlik chorasi bo'lib, botlarning tizimdan foydalanishini oldini oladi."
             )
         else:
             await progress_message.edit_text(

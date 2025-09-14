@@ -232,6 +232,25 @@ Video ochiq ekanligini tekshiring. Shaxsiy yoki cheklangan videolar yuklab olinm
 
 </details>
 
+<details>
+<summary><b>❌ "Sign in to confirm you're not a bot" (YouTube)</b></summary>
+
+YouTube hozirda avtomatik yuklab olishni cheklamoqda. Bu xavfsizlik chorasi bo'lib, botlarning tizimdan foydalanishini oldini oladi.
+
+**Yechimlar:**
+1. **cookies.txt faylini yaratish:**
+   - Brauzeringizga "Get cookies.txt" kengaytmasini o'rnating
+   - YouTube saytiga kirib, hisobingizga kiring
+   - cookies.txt faylini eksport qiling
+   - Uni bot katalogiga joylashtiring
+
+2. **Muqobil platformalardan foydalaning:**
+   - Vimeo, Instagram, TikTok kabi boshqa platformalardan video yuklab oling
+
+3. **Video manzilini tekshiring:**
+   - URL to'g'ri ekanligiga ishonch hosil qiling
+</details>
+
 ---
 
 ## 📈 **Kelajakdagi rejalar**
