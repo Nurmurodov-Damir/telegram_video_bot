@@ -53,7 +53,24 @@ cd telegram_video_bot
 pip install -r requirements.txt
 ```
 
-3. **Muhit o'zgaruvchilarini sozlang:**
+3. **FFmpeg ni o'rnating (Instagram audio ajratish uchun):**
+```bash
+# Windows
+# https://ffmpeg.org/download.html saytidan yuklab oling va PATH ga qo'shing
+
+# MacOS
+brew install ffmpeg
+
+# Linux (Ubuntu/Debian)
+sudo apt update
+sudo apt install ffmpeg
+
+# Linux (CentOS/RHEL)
+sudo yum install epel-release
+sudo yum install ffmpeg
+```
+
+4. **Muhit o'zgaruvchilarini sozlang:**
 ```bash
 cp .env.example .env
 ```

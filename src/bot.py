@@ -93,8 +93,117 @@ def get_platform_button_text(platform):
     }
     return buttons.get(platform, 'Video')
 
-# Tarjima funksiyasi
-def translate_text(text, target_lang='uz'):
+def check_ffmpeg_available():
+    """FFmpeg mavjudligini tekshirish."""
+    try:
+        import shutil
+        return shutil.which('ffmpeg') is not None
+    except:
+        return False
+
+def extract_audio_from_video(video_path):
+    """Videodan audio ajratib olish."""
+    if not check_ffmpeg_available():
+        return None
+    
+    try:
+        import os
+        # Audio fayl nomini yaratish
+        audio_path = video_path.rsplit('.', 1)[0] + '_audio.mp3'
+        
+        # FFmpeg orqali audio ajratish
+        import subprocess
+        cmd = [
+            'ffmpeg',
+            '-i', video_path,
+            '-q:a', '0',
+            '-map', 'a',
+            '-y',
+            audio_path
+        ]
+        
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+        if result.returncode == 0 and os.path.exists(audio_path):
+            return audio_path
+        else:
+            logger.error(f"Audio ajratishda xatolik: {result.stderr}")
+            return None
+    except Exception as e:
+        logger.error(f"Audio ajratishda istisno: {str(e)}")
+        return None
+
+async def send_instagram_content_separately(update, video_filename, info_dict, platform_sticker, platform_button_text):
+    """Instagram video va audioni alohida yuborish."""
+    try:
+        video_title = info_dict.get('title', 'Instagram video')
+        
+        # Video faylini yuborish
+        with open(video_filename, 'rb') as video_file:
+            caption_text = f"{platform_sticker} {platform_button_text} (Video): {video_title}"
+            
+            # Instagram caption mavjud bo'lsa
+            if info_dict.get('description'):
+                instagram_caption = info_dict.get('description', '')
+                if len(instagram_caption) > 200:
+                    caption_text += f"\n\n📢 Caption:\n{instagram_caption[:200]}..."
+                else:
+                    caption_text += f"\n\n📢 Caption:\n{instagram_caption}"
+                
+                # Agar tarjima mavjud bo'lsa
+                if TRANSLATION_AVAILABLE:
+                    try:
+                        translated_caption = translate_text(instagram_caption, 'uz')
+                        if translated_caption and translated_caption != instagram_caption:
+                            caption_text += f"\n\n🔄 Tarjima:\n{translated_caption[:200]}{'...' if len(translated_caption) > 200 else ''}"
+                    except Exception as e:
+                        logger.error(f"Tarjima xatosi: {str(e)}")
+            
+            await update.message.reply_video(
+                video=video_file,
+                caption=caption_text,
+                supports_streaming=True
+            )
+        
+        # Audio ajratish (agar FFmpeg mavjud bo'lsa)
+        if check_ffmpeg_available():
+            await update.message.reply_text("🎵 Audioni ajratish jarayoni boshlanmoqda...")
+            
+            audio_path = extract_audio_from_video(video_filename)
+            if audio_path and os.path.exists(audio_path):
+                # Audio fayl hajmini tekshirish
+                audio_size = os.path.getsize(audio_path)
+                max_size = int(os.getenv("MAX_VIDEO_SIZE", "52428800"))  # 50MB
+                
+                if audio_size <= max_size:
+                    with open(audio_path, 'rb') as audio_file:
+                        await update.message.reply_audio(
+                            audio=audio_file,
+                            title=f"{video_title} (Audio)",
+                            caption=f"{platform_sticker} {platform_button_text} (Audio): {video_title}"
+                        )
+                    # Audio faylni o'chirish
+                    os.remove(audio_path)
+                else:
+                    await update.message.reply_text(
+                        f"❌ Audio fayl juda katta ({audio_size / (1024*1024):.1f}MB). "
+                        f"Telegram faqat {max_size / (1024*1024):.0f}MB gacha fayllarni yuborishga ruxsat beradi."
+                    )
+            else:
+                await update.message.reply_text("❌ Audioni ajratishda xatolik yuz berdi.")
+        else:
+            # FFmpeg o'rnatilmaganligi haqida xabar
+            ffmpeg_message = (
+                "ℹ️ Audio ajratish uchun FFmpeg kerak.\n\n"
+                "FFmpeg ni o'rnatish uchun:\n"
+                "Windows: https://ffmpeg.org/download.html dan yuklab oling\n"
+                "MacOS: brew install ffmpeg\n"
+                "Linux: sudo apt install ffmpeg"
+            )
+            await update.message.reply_text(ffmpeg_message)
+            
+    except Exception as e:
+        logger.error(f"Instagram contentni alohida yuborishda xatolik: {str(e)}")
+        raise
     """Matnni berilgan tilga tarjima qilish."""
     if not TRANSLATION_AVAILABLE or not text:
         return text
@@ -427,9 +536,6 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         with open(video_filename, 'rb') as video_file:
             caption_text = f"{platform_sticker} {platform_button_text}: {video_title}"
             
-            # Subtitle mavjudligini tekshirish va tarjima qilish
-            subtitle_info = ""
-            
             # Instagram uchun maxsus caption tekshiruvi
             if 'instagram.com' in url or 'instagr.am' in url:
                 # Instagram captionlarini tekshirish
@@ -507,11 +613,46 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                     if available_length > 100:
                         caption_text += subtitle_info[:available_length] + "..."
 
-            await update.message.reply_video(
-                video=video_file,
-                caption=caption_text,
-                supports_streaming=True
-            )
+            # Instagram uchun alohida video/audio yuborish variantini taklif qilish
+            if 'instagram.com' in url or 'instagr.am' in url:
+                # FFmpeg mavjudligini tekshirish
+                if check_ffmpeg_available():
+                    # Video fayl nomini saqlash
+                    instagram_video_files[user.id] = video_filename
+                    
+                    # Tugmalar orqali foydalanuvchidan tanlov so'rash
+                    keyboard = [
+                        [InlineKeyboardButton("📹 Faqat video", callback_data=f"insta_video_{user.id}")],
+                        [InlineKeyboardButton("🎵 Video + Audio", callback_data=f"insta_both_{user.id}")]
+                    ]
+                    reply_markup = InlineKeyboardMarkup(keyboard)
+                    
+                    # Avval video yuborish
+                    await update.message.reply_video(
+                        video=video_file,
+                        caption=caption_text,
+                        supports_streaming=True
+                    )
+                    
+                    # So'ng tanlov tugmasini yuborish
+                    await update.message.reply_text(
+                        "Instagram video yuklandi. Audio ham ajratib olishni xohlaysizmi?",
+                        reply_markup=reply_markup
+                    )
+                else:
+                    # FFmpeg yo'q bo'lsa, oddiy tarzda video yuborish
+                    await update.message.reply_video(
+                        video=video_file,
+                        caption=caption_text,
+                        supports_streaming=True
+                    )
+            else:
+                # Boshqa platformalar uchun oddiy tarzda yuborish
+                await update.message.reply_video(
+                    video=video_file,
+                    caption=caption_text,
+                    supports_streaming=True
+                )
         
         # Yuklab olingan faylni tozalash
         os.remove(video_filename)
@@ -597,6 +738,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             "Masalan: https://www.youtube.com/watch?v=example"
         )
 
+# Global o'zgaruvchilar
+instagram_video_files = {}  # {user_id: video_filename}
+
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Tugma bosilganda ishlov berish."""
     query = update.callback_query
@@ -605,7 +749,60 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     data = query.data
     user = query.from_user
     
+    # Instagram audio ajratish tugmasi
+    if data.startswith("insta_"):
+        action_parts = data.split("_")
+        action = action_parts[1]  # "video" yoki "both"
+        user_id = user.id
+        
+        if action == "both":
+            # Audio ajratish
+            if user_id in instagram_video_files:
+                video_filename = instagram_video_files[user_id]
+                await query.edit_message_text("🎵 Instagram videodan audio ajratish jarayoni boshlanmoqda...")
+                
+                # Audio ajratish
+                if check_ffmpeg_available():
+                    audio_path = extract_audio_from_video(video_filename)
+                    if audio_path and os.path.exists(audio_path):
+                        # Audio fayl hajmini tekshirish
+                        audio_size = os.path.getsize(audio_path)
+                        max_size = int(os.getenv("MAX_VIDEO_SIZE", "52428800"))  # 50MB
+                        
+                        if audio_size <= max_size:
+                            with open(audio_path, 'rb') as audio_file:
+                                await query.message.reply_audio(
+                                    audio=audio_file,
+                                    caption="🎵 Instagram videodan ajratilgan audio"
+                                )
+                            # Audio faylni o'chirish
+                            os.remove(audio_path)
+                        else:
+                            await query.message.reply_text(
+                                f"❌ Audio fayl juda katta ({audio_size / (1024*1024):.1f}MB). "
+                                f"Telegram faqat {max_size / (1024*1024):.0f}MB gacha fayllarni yuborishga ruxsat beradi."
+                            )
+                    else:
+                        await query.message.reply_text("❌ Audioni ajratishda xatolik yuz berdi.")
+                else:
+                    await query.message.reply_text(
+                        "❌ FFmpeg o'rnatilmagan. Audio ajratish uchun FFmpeg kerak.\n\n"
+                        "FFmpeg ni o'rnatish uchun:\n"
+                        "Windows: https://ffmpeg.org/download.html dan yuklab oling\n"
+                        "MacOS: brew install ffmpeg\n"
+                        "Linux: sudo apt install ffmpeg"
+                    )
+                
+                # Video fayl nomini o'chirish
+                del instagram_video_files[user_id]
+            else:
+                await query.edit_message_text("❌ Video fayl topilmadi. Iltimos, avval video yuklang.")
+        elif action == "video":
+            await query.edit_message_text("📹 Faqat video yuborildi.")
+        return
+    
     if data.startswith("platform_"):
+
         platform = data[9:]  # "platform_" dan keyingi qism
         platform_names = {
             'youtube': 'YouTube',
