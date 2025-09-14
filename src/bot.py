@@ -128,7 +128,7 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 }
             },
             # Instagram uchun qo'shimcha sozlamalar
-            'cookiesfrombrowser': ['chrome', 'firefox', 'edge'],  # Browser cookies dan foydalanish (Safari olib tashlandi)
+            # 'cookiesfrombrowser': ['chrome', 'firefox', 'edge'],  # Browser cookies o'chirildi - keyring muammosi tufayli
             'sleep_interval': 1,  # So'rovlar orasida 1 soniya kutish
             'max_sleep_interval': 5,  # Maksimal kutish vaqti
         }
@@ -145,8 +145,8 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             ydl_opts['format'] = 'best[height<=720]/best[height<=480]/best'
             ydl_opts['writesubtitles'] = False
             ydl_opts['writeautomaticsub'] = False
-            # Safari keyring muammosini hal qilish uchun
-            ydl_opts['cookiesfrombrowser'] = ['chrome', 'firefox', 'edge']
+            # Browser cookies o'chirildi - keyring muammosi tufayli
+            # ydl_opts['cookiesfrombrowser'] = ['chrome', 'firefox', 'edge']
         
         # Jarayonni yangilash
         await progress_message.edit_text("🔍 Video tahlil qilinmoqda...")
@@ -264,14 +264,15 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                     "Iltimos, boshqa video manzilini yuboring."
                 )
         elif 'unsupported keyring' in error_msg:
-            # Safari keyring xatosi uchun maxsus xabar
+            # Browser keyring xatosi uchun maxsus xabar
             await progress_message.edit_text(
                 "❌ Browser cookies bilan bog'liq muammo yuz berdi.\n"
-                "Bu Windows tizimida Safari keyring qo'llab-quvvatlanmasligi tufayli.\n\n"
+                "Bu Windows tizimida browser keyring qo'llab-quvvatlanmasligi tufayli.\n\n"
                 "💡 **Yechim:**\n"
-                "• Chrome, Firefox yoki Edge brauzerlaridan foydalaning\n"
-                "• Yoki cookies sozlamalarini o'chirib, qayta urinib ko'ring\n"
-                "• Video manzilini to'g'ri ekanligini tekshiring"
+                "• Cookies sozlamalari o'chirildi\n"
+                "• Video ochiq ekanligini tekshiring\n"
+                "• Bir necha daqiqa kutib, qayta urinib ko'ring\n"
+                "• Boshqa video manzilini sinab ko'ring"
             )
         elif 'instagram.com' in url or 'instagr.am' in url:
             # Instagram uchun umumiy xato xabari
