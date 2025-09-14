@@ -82,12 +82,12 @@ def get_platform_sticker(platform):
 def get_platform_button_text(platform):
     """Platformaga mos tugma matnini qaytarish."""
     buttons = {
-        'youtube': 'YouTube Video',
-        'instagram': 'Instagram Video',
-        'tiktok': 'TikTok Video',
-        'twitter': 'Twitter Video',
-        'vimeo': 'Vimeo Video',
-        'facebook': 'Facebook Video',
+        'youtube': 'YouTube Videosi',
+        'instagram': 'Instagram Videosi',
+        'tiktok': 'TikTok Videosi',
+        'twitter': 'Twitter Videosi',
+        'vimeo': 'Vimeo Videosi',
+        'facebook': 'Facebook Videosi',
         'unknown': 'Boshqa Video'
     }
     return buttons.get(platform, 'Video')
@@ -112,22 +112,22 @@ def translate_text(text, target_lang='uz'):
 
 # Command handlers
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Send a message when the command /start is issued."""
+    """Foydalanuvchi /start buyrug'ini berganida xabar yuborish."""
     user = update.effective_user
     if user:
         welcome_message = (
-            f"👋 Hello {user.first_name}!\n\n"
-            "I am an advanced video bot that can download videos from various platforms.\n\n"
-            "📥 Just send me a video URL and I will download it for you.\n"
-            "✅ Supported Platforms:\n"
+            f"👋 Salom {user.first_name}!\n\n"
+            "Men turli platformalardan videolarni yuklab olishga yordam beradigan ilg'or video botman.\n\n"
+            "📥 Menga video URL manzilini yuboring va men uni siz uchun yuklab olaman.\n"
+            "✅ Qo'llab-quvvatlanadigan platformalar:\n"
             "• 🟥 YouTube\n"
             "• 📸 Instagram\n"
             "• 🎵 TikTok\n"
             "• 🐦 Twitter/X\n"
             "• 🔷 Vimeo\n"
             "• 📘 Facebook\n\n"
-            "⚠️ Note: Videos larger than 50MB will be sent using special methods due to Telegram's limitations.\n\n"
-            "👨‍💻 Author: N.Damir - Senior Developer"
+            "⚠️ Eslatma: Telegram cheklovlari tufayli 50MB dan katta videolar maxsus usullar bilan yuboriladi.\n\n"
+            "👨‍💻 Muallif: N.Damir - Senior Dasturchi"
         )
         if update.message:
             # Platform selection buttons
@@ -143,50 +143,50 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             await update.message.reply_text(welcome_message, reply_markup=reply_markup)
     else:
         if update.message:
-            await update.message.reply_text("Could not retrieve user information.")
+            await update.message.reply_text("Foydalanuvchi ma'lumotlarini olish imkonsiz.")
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Send a message when the command /help is issued."""
+    """Foydalanuvchi /help buyrug'ini berganida xabar yuborish."""
     help_text = (
-        "🤖 Video Downloader Bot Help\n\n"
-        "I can help you download videos from various platforms.\n\n"
-        "📥 How to use:\n"
-        "1. Send me the URL of the video you want to download.\n"
-        "2. Wait for me to process it and send the video back.\n\n"
-        "📋 Supported Platforms:\n"
+        "🤖 Video Yuklab Olish Boti Yordami\n\n"
+        "Men sizga turli platformalardan videolarni yuklab olishga yordam beraman.\n\n"
+        "📥 Foydalanish bo'yicha qo'llanma:\n"
+        "1. Menga yuklab olmoqchi bo'lgan videoning URL manzilini yuboring.\n"
+        "2. Men uni qayta ishlab, videoni qaytaraman.\n\n"
+        "📋 Qo'llab-quvvatlanadigan platformalar:\n"
         "• 🟥 YouTube\n"
         "• 📸 Instagram\n"
         "• 🎵 TikTok\n"
         "• 🐦 Twitter/X\n"
         "• 🔷 Vimeo\n"
         "• 📘 Facebook\n\n"
-        "⚠️ Limitations:\n"
-        "• Videos longer than 100 minutes cannot be downloaded.\n"
-        "• Videos larger than 50MB will be sent using special methods.\n"
-        "• Some sites may restrict downloads.\n\n"
-        "⌨️ Commands:\n"
-        "/start - Start the bot\n"
-        "/help - Show this help message\n"
-        "/about - Show information about the bot"
+        "⚠️ Cheklovlar:\n"
+        "• 100 daqiqadan ortiq videolarni yuklab olib bo'lmaydi.\n"
+        "• 50MB dan katta videolar maxsus usullar bilan yuboriladi.\n"
+        "• Ba'zi saytlar yuklab olishni cheklaydi.\n\n"
+        "⌨️ Buyruqlar:\n"
+        "/start - Botni ishga tushirish\n"
+        "/help - Ushbu yordam xabarini ko'rsatish\n"
+        "/about - Bot haqida ma'lumot ko'rsatish"
     )
     if update.message:
         await update.message.reply_text(help_text)
 
 async def about_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Send a message with information about the bot."""
+    """Foydalanuvchiga bot haqida ma'lumot yuborish."""
     about_text = (
-        "📹 Video Downloader Bot\n\n"
-        "This bot allows you to download videos from various platforms directly to Telegram.\n\n"
-        "🛠 Technologies Used:\n"
+        "📹 Video Yuklab Olish Boti\n\n"
+        "Ushbu bot sizga turli platformalardan videolarni bevosita Telegramga yuklab olish imkonini beradi.\n\n"
+        "🛠 Foydalanilgan texnologiyalar:\n"
         "• 🐍 python-telegram-bot\n"
         "• 📥 yt-dlp\n"
-        "• 🌐 deep-translator (for translation)\n"
-        "• 😊 emoji (for stickers)\n\n"
-        "👨‍💻 Developer:\n"
-        "N.Damir - Senior Developer\n\n"
-        "🔒 Privacy:\n"
-        "No videos or personal information are stored on our servers.\n"
-        "All processing is done temporarily, and files are deleted after being sent."
+        "• 🌐 deep-translator (tarjima uchun)\n"
+        "• 😊 emoji (stikerlar uchun)\n\n"
+        "👨‍💻 Dasturchi:\n"
+        "N.Damir - Senior Dasturchi\n\n"
+        "🔒 Maxfiylik:\n"
+        "Hech qanday video yoki shaxsiy ma'lumot serverlarimizda saqlanmaydi.\n"
+        "Barcha qayta ishlash vaqtinchalik amalga oshiriladi va fayllar yuborilgandan keyin o'chirib tashlanadi."
     )
     if update.message:
         await update.message.reply_text(about_text)
@@ -234,7 +234,7 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         if shutil.which('ffmpeg'):
             ydl_opts['format'] = 'best[height<=720]+bestaudio/best[height<=480]/best'
         else:
-            logger.warning("FFmpeg not found. The downloaded format may not be the best available.")
+            logger.warning("FFmpeg topilmadi. Yuklab olingan format eng yaxshi bo'lmasligi mumkin.")
         
         # Instagram uchun qo'shimcha format sozlamalari
         if 'instagram.com' in url or 'instagr.am' in url:
