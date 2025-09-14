@@ -128,7 +128,7 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 }
             },
             # Instagram uchun qo'shimcha sozlamalar
-            'cookiesfrombrowser': ['chrome', 'firefox', 'safari', 'edge'],  # Browser cookies dan foydalanish
+            'cookiesfrombrowser': ['chrome', 'firefox', 'edge'],  # Browser cookies dan foydalanish (Safari olib tashlandi)
             'sleep_interval': 1,  # So'rovlar orasida 1 soniya kutish
             'max_sleep_interval': 5,  # Maksimal kutish vaqti
         }
@@ -145,6 +145,8 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             ydl_opts['format'] = 'best[height<=720]/best[height<=480]/best'
             ydl_opts['writesubtitles'] = False
             ydl_opts['writeautomaticsub'] = False
+            # Safari keyring muammosini hal qilish uchun
+            ydl_opts['cookiesfrombrowser'] = ['chrome', 'firefox', 'edge']
         
         # Jarayonni yangilash
         await progress_message.edit_text("🔍 Video tahlil qilinmoqda...")
@@ -261,6 +263,16 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                     "Bu ba'zi ijtimoiy tarmoq platformalarida yuzaga keladi.\n"
                     "Iltimos, boshqa video manzilini yuboring."
                 )
+        elif 'unsupported keyring' in error_msg:
+            # Safari keyring xatosi uchun maxsus xabar
+            await progress_message.edit_text(
+                "❌ Browser cookies bilan bog'liq muammo yuz berdi.\n"
+                "Bu Windows tizimida Safari keyring qo'llab-quvvatlanmasligi tufayli.\n\n"
+                "💡 **Yechim:**\n"
+                "• Chrome, Firefox yoki Edge brauzerlaridan foydalaning\n"
+                "• Yoki cookies sozlamalarini o'chirib, qayta urinib ko'ring\n"
+                "• Video manzilini to'g'ri ekanligini tekshiring"
+            )
         elif 'instagram.com' in url or 'instagr.am' in url:
             # Instagram uchun umumiy xato xabari
             await progress_message.edit_text(
