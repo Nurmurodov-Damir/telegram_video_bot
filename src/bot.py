@@ -650,6 +650,15 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                         caption=caption_text,
                         supports_streaming=True
                     )
+                    # FFmpeg yo'qligi haqida xabar
+                    ffmpeg_message = (
+                        "ℹ️ Audio ajratish uchun FFmpeg kerak.\n\n"
+                        "FFmpeg ni o'rnatish uchun:\n"
+                        "Windows: https://ffmpeg.org/download.html dan yuklab oling\n"
+                        "MacOS: brew install ffmpeg\n"
+                        "Linux: sudo apt install ffmpeg"
+                    )
+                    await update.message.reply_text(ffmpeg_message)
             else:
                 # Boshqa platformalar uchun oddiy tarzda yuborish
                 await update.message.reply_video(
@@ -909,6 +918,8 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                                     subtitle_info += f"\n\n🔄 Tarjima:\n{translated_caption[:300]}{'...' if len(translated_caption) > 300 else ''}"
                             except Exception as e:
                                 logger.error(f"Tarjima xatosi: {str(e)}")
+                                # Tarjima xatosi yuz bersa ham original captionni qo'shamiz
+                                pass
                 
                 # Caption uzunligini tekshirish
                 if subtitle_info:
@@ -921,14 +932,18 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                             caption_text += subtitle_info[:available_length] + "..."
                 
                 # Video faylni yuborish
-                with open(video_filename, 'rb') as video_file:
-                    await query.message.reply_video(
-                        video=video_file,
-                        caption=caption_text,
-                        supports_streaming=True
-                    )
-                
-                await query.edit_message_text("📹 Video yuborildi!")
+                try:
+                    with open(video_filename, 'rb') as video_file:
+                        await query.message.reply_video(
+                            video=video_file,
+                            caption=caption_text,
+                            supports_streaming=True
+                        )
+                    
+                    await query.edit_message_text("📹 Video yuborildi!")
+                except Exception as e:
+                    logger.error(f"Video yuborishda xatolik: {str(e)}")
+                    await query.edit_message_text(f"❌ Video yuborishda xatolik yuz berdi: {str(e)}")
                 
                 # Video fayl ma'lumotlarini o'chirish
                 if user_id in instagram_video_files:
