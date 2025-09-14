@@ -621,7 +621,13 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 # FFmpeg mavjudligini tekshirish
                 if check_ffmpeg_available():
                     # Video fayl nomini saqlash
-                    instagram_video_files[user.id] = video_filename
+                    instagram_video_files[user.id] = {
+                        'video': video_filename,
+                        'info': info_dict,
+                        'title': video_title,
+                        'platform_sticker': platform_sticker,
+                        'platform_button_text': platform_button_text
+                    }
                     
                     # Tugmalar orqali foydalanuvchidan tanlov so'rash
                     keyboard = [
@@ -630,7 +636,7 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                     ]
                     reply_markup = InlineKeyboardMarkup(keyboard)
                     
-                    # Avval video yuborish
+                    # Avval video yuborish (caption bilan)
                     await update.message.reply_video(
                         video=video_file,
                         caption=caption_text,
@@ -643,7 +649,7 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                         reply_markup=reply_markup
                     )
                 else:
-                    # FFmpeg yo'q bo'lsa, oddiy tarzda video yuborish
+                    # FFmpeg yo'q bo'lsa, oddiy tarzda video yuborish (caption bilan)
                     await update.message.reply_video(
                         video=video_file,
                         caption=caption_text,
@@ -742,7 +748,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         )
 
 # Global o'zgaruvchilar
-instagram_video_files = {}  # {user_id: video_filename}
+instagram_video_files = {}  # {user_id: {'video': video_filename, 'info': info_dict}}
 
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Tugma bosilganda ishlov berish."""
@@ -761,8 +767,28 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         if action == "both":
             # Audio ajratish
             if user_id in instagram_video_files:
-                video_filename = instagram_video_files[user_id]
+                video_data = instagram_video_files[user_id]
+                video_filename = video_data['video']
+                info_dict = video_data['info']
+                video_title = video_data['title']
+                platform_sticker = video_data['platform_sticker']
+                platform_button_text = video_data['platform_button_text']
+                
                 await query.edit_message_text("🎵 Instagram videodan audio ajratish jarayoni boshlanmoqda...")
+                
+                # Original video ma'lumotlarini olish
+                subtitle_info = ""
+                
+                # Video fayl nomidan ma'lumot olish (agar kerak bo'lsa)
+                if video_filename:
+                    # Video nomidan sarlavha olishga harakat qilish
+                    import os
+                    base_name = os.path.basename(video_filename)
+                    if base_name and '_' in base_name:
+                        # Foydalanuvchi ID dan keyingi qismni olish
+                        parts = base_name.split('_', 1)
+                        if len(parts) > 1:
+                            video_title = parts[1].rsplit('.', 1)[0]  # Kengaytmasiz
                 
                 # Audio ajratish
                 if check_ffmpeg_available():
@@ -772,11 +798,44 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                         audio_size = os.path.getsize(audio_path)
                         max_size = int(os.getenv("MAX_VIDEO_SIZE", "52428800"))  # 50MB
                         
+                        audio_caption = f"{platform_sticker} {platform_button_text} (Audio): {video_title}"
+                        
+                        # Instagram caption mavjud bo'lsa, uni ham qo'shish
+                        if info_dict.get('description'):
+                            instagram_caption = info_dict.get('description', '')
+                            if instagram_caption and len(instagram_caption) > 0:
+                                subtitle_info += "\n\n📢 Instagram Caption:\n"
+                                # Caption uzunligini cheklash
+                                if len(instagram_caption) > 300:
+                                    subtitle_info += instagram_caption[:300] + "..."
+                                else:
+                                    subtitle_info += instagram_caption
+                                
+                                # Agar tarjima mavjud bo'lsa
+                                if TRANSLATION_AVAILABLE:
+                                    try:
+                                        translated_caption = translate_text(instagram_caption, 'uz')
+                                        if translated_caption and translated_caption != instagram_caption:
+                                            subtitle_info += f"\n\n🔄 Tarjima:\n{translated_caption[:300]}{'...' if len(translated_caption) > 300 else ''}"
+                                    except Exception as e:
+                                        logger.error(f"Tarjima xatosi: {str(e)}")
+                        
+                        # Caption uzunligini tekshirish
+                        if subtitle_info:
+                            if len(audio_caption + subtitle_info) <= 1024:
+                                audio_caption += subtitle_info
+                            else:
+                                # Agar caption juda uzun bo'lsa, qisqartirish
+                                available_length = 1024 - len(audio_caption) - 50
+                                if available_length > 100:
+                                    audio_caption += subtitle_info[:available_length] + "..."
+                        
                         if audio_size <= max_size:
                             with open(audio_path, 'rb') as audio_file:
                                 await query.message.reply_audio(
                                     audio=audio_file,
-                                    caption="🎵 Instagram videodan ajratilgan audio"
+                                    title=f"{video_title} (Audio)",
+                                    caption=audio_caption
                                 )
                             # Audio faylni o'chirish
                             os.remove(audio_path)
@@ -796,8 +855,9 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                         "Linux: sudo apt install ffmpeg"
                     )
                 
-                # Video fayl nomini o'chirish
-                del instagram_video_files[user_id]
+                # Video fayl ma'lumotlarini o'chirish
+                if user_id in instagram_video_files:
+                    del instagram_video_files[user_id]
             else:
                 await query.edit_message_text("❌ Video fayl topilmadi. Iltimos, avval video yuklang.")
         elif action == "video":
