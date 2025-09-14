@@ -8,6 +8,8 @@ Ushbu bot foydalanuvchilarga URL manzilini yuborish orqali turli platformalardan
 
 import logging
 import os
+import hashlib
+import time
 from dotenv import load_dotenv
 
 # .env faylini yuklash
@@ -111,27 +113,42 @@ def translate_text(text, target_lang='uz'):
 # Foydalanuvchi so'rovlarini saqlash (kelajakda ishlatish uchun)
 # user_requests = {}
 
-# Buyruq handlerlarini belgilash
+# Command handlers
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Foydalanuvchi /start buyrug'ini yuborganida xabar yuborish."""
+    """Send a message when the command /start is issued."""
     user = update.effective_user
     if user:
         welcome_message = (
-            f"👋 Salom {user.first_name}!\n\n"
-            "Men turli platformalardan videolarni yuklab olishga yordam beradigan zamonaviy video botiman.\n\n"
-            "📥 Menga video URL manzilini yuboring va men uni siz uchun yuklab olaman.\n"
-            "✅ Qo'llab-quvvatlanadigan platformalar:\n"
-            "• 🟥 YouTube\n"
-            "• 📸 Instagram\n"
-            "• 🎵 TikTok\n"
-            "• 🐦 Twitter/X\n"
-            "• 🔷 Vimeo\n"
-            "• 📘 Facebook\n\n"
-            "⚠️ Eslatma: Telegram cheklovlari tufayli 50MB dan katta videolar maxsus usullar bilan yuboriladi.\n\n"
-            "👨‍💻 Dastur muallifi: N.Damir - Senior Dasturchi"
+            f"👋 Hello {user.first_name}!
+
+"
+            "I am an advanced video bot that can download videos from various platforms.
+
+"
+            "📥 Just send me a video URL and I will download it for you.
+"
+            "✅ Supported Platforms:
+"
+            "• 🟥 YouTube
+"
+            "• 📸 Instagram
+"
+            "• 🎵 TikTok
+"
+            "• 🐦 Twitter/X
+"
+            "• 🔷 Vimeo
+"
+            "• 📘 Facebook
+
+"
+            "⚠️ Note: Videos larger than 50MB will be sent using special methods due to Telegram's limitations.
+
+"
+            "👨‍💻 Author: N.Damir - Senior Developer"
         )
         if update.message:
-            # Platforma tanlash tugmalari
+            # Platform selection buttons
             keyboard = [
                 [InlineKeyboardButton(" YouTube", callback_data="platform_youtube")],
                 [InlineKeyboardButton("📸 Instagram", callback_data="platform_instagram")],
@@ -144,53 +161,93 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             await update.message.reply_text(welcome_message, reply_markup=reply_markup)
     else:
         if update.message:
-            await update.message.reply_text("Foydalanuvchi ma'lumotlarini olish imkonsiz.")
+            await update.message.reply_text("Could not retrieve user information.")
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Foydalanuvchi /help buyrug'ini yuborganida xabar yuborish."""
+    """Send a message when the command /help is issued."""
     help_text = (
-        "🤖 Video Yuklab Olish Boti Yordami\n\n"
-        "Men turli platformalardan videolarni yuklab olishga yordam beraman.\n\n"
-        "📥 Foydalanish tartibi:\n"
-        "1. Menga yuklab olmoqchi bo'lgan videoning URL manzilini yuboring\n"
-        "2. Men qayta ishlash va videoni yuborishimni kuting\n\n"
-        "📋 Qo'llab-quvvatlanadigan platformalar:\n"
-        "• 🟥 YouTube\n"
-        "• 📸 Instagram\n"
-        "• 🎵 TikTok\n"
-        "• 🐦 Twitter/X\n"
-        "• 🔷 Vimeo\n"
-        "• 📘 Facebook\n\n"
-        "⚠️ Cheklovlar:\n"
-        "• 100 daqiqadan ortiq videolar yuklab olinmaydi\n"
-        "• 50MB dan ortiq videolar maxsus usullar bilan yuboriladi\n"
-        "• Ba'zi saytlar yuklab olishni cheklaydi\n\n"
-        "⌨️ Buyruqlar:\n"
-        "/start - Botni ishga tushirish\n"
-        "/help - Ushbu yordam xabarini ko'rsatish\n"
-        "/about - Bot haqida ma'lumot"
+        "🤖 Video Downloader Bot Help
+
+"
+        "I can help you download videos from various platforms.
+
+"
+        "📥 How to use:
+"
+        "1. Send me the URL of the video you want to download.
+"
+        "2. Wait for me to process it and send the video back.
+
+"
+        "📋 Supported Platforms:
+"
+        "• 🟥 YouTube
+"
+        "• 📸 Instagram
+"
+        "• 🎵 TikTok
+"
+        "• 🐦 Twitter/X
+"
+        "• 🔷 Vimeo
+"
+        "• 📘 Facebook
+
+"
+        "⚠️ Limitations:
+"
+        "• Videos longer than 100 minutes cannot be downloaded.
+"
+        "• Videos larger than 50MB will be sent using special methods.
+"
+        "• Some sites may restrict downloads.
+
+"
+        "⌨️ Commands:
+"
+        "/start - Start the bot
+"
+        "/help - Show this help message
+"
+        "/about - Show information about the bot"
     )
     if update.message:
         await update.message.reply_text(help_text)
 
 async def about_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Bot haqida ma'lumot yuborish."""
+    """Send a message with information about the bot."""
     about_text = (
-        "📹 Video Yuklab Olish Boti\n\n"
-        "Ushbu bot turli platformalardan videolarni bevosita Telegramga yuklab olish imkonini beradi.\n\n"
-        "🛠 Yaratilgan texnologiyalar:\n"
-        "• 🐍 python-telegram-bot\n"
-        "• 📥 yt-dlp\n"
-        "• 🌐 deep-translator (tarjima uchun)\n"
-        "• 😊 emoji (stikerlar uchun)\n\n"
-        "👨‍💻 Ishlab chiquvchi:\n"
-        "N.Damir - Senior Dasturchi\n\n"
-        "🔒 Maxfiylik:\n"
-        "Hech qanday video yoki shaxsiy ma'lumot serverlarimizda saqlanmaydi.\n"
-        "Barcha qayta ishlash vaqtinchalik amalga oshiriladi va fayllar yuborilgandan so'ng o'chirib tashlanadi."
+        "📹 Video Downloader Bot
+
+"
+        "This bot allows you to download videos from various platforms directly to Telegram.
+
+"
+        "🛠 Technologies Used:
+"
+        "• 🐍 python-telegram-bot
+"
+        "• 📥 yt-dlp
+"
+        "• 🌐 deep-translator (for translation)
+"
+        "• 😊 emoji (for stickers)
+
+"
+        "👨‍💻 Developer:
+"
+        "N.Damir - Senior Developer
+
+"
+        "🔒 Privacy:
+"
+        "No videos or personal information are stored on our servers.
+"
+        "All processing is done temporarily, and files are deleted after being sent."
     )
     if update.message:
         await update.message.reply_text(about_text)
+
 
 # ProgressLogger sinfi olib tashlandi - ishlatilmayapti
 
