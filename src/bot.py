@@ -798,7 +798,8 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                     return
                 
                 # Video fayl mavjudligini tekshirish
-                if not os.path.exists(video_filename):
+                import os as os_module
+                if not os_module.path.exists(video_filename):
                     await query.edit_message_text(f"❌ Video fayl topilmadi: {video_filename}")
                     # Ma'lumotlarni tozalash
                     if user_id in instagram_video_files:
@@ -856,7 +857,8 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 
                 # Video faylni yuborish
                 # Avval fayl mavjudligini tekshirish
-                if not os.path.exists(video_filename):
+                import os as os_module
+                if not os_module.path.exists(video_filename):
                     await query.edit_message_text(f"❌ Video fayl topilmadi: {video_filename}")
                     # Ma'lumotlarni tozalash
                     if user_id in instagram_video_files:
@@ -958,7 +960,8 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                     return
                 
                 # Video fayl mavjudligini tekshirish
-                if not os.path.exists(video_filename):
+                import os as os_module
+                if not os_module.path.exists(video_filename):
                     await query.edit_message_text(f"❌ Video fayl topilmadi: {video_filename}")
                     # Ma'lumotlarni tozalash
                     if user_id in instagram_video_files:
@@ -1003,7 +1006,8 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 
                 # Video faylni yuborish
                 try:
-                    if os.path.exists(video_filename):
+                    import os as os_module
+                    if os_module.path.exists(video_filename):
                         with open(video_filename, 'rb') as video_file:
                             await query.message.reply_video(
                                 video=video_file,
