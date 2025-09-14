@@ -119,6 +119,18 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         ydl_opts = {
             'outtmpl': os.path.join(DOWNLOADS_DIR, f'{user.id}_%(title)s.%(ext)s'),
             'format': 'best[height<=720][filesize<50M]/best[filesize<50M]/best',  # More flexible format selection
+            # Instagram uchun maxsus sozlamalar
+            'extractor_args': {
+                'instagram': {
+                    'api': 'web',
+                    'include_ads': False,
+                    'include_paid_promotion': False,
+                }
+            },
+            # Instagram uchun qo'shimcha sozlamalar
+            'cookiesfrombrowser': ['chrome', 'firefox', 'safari', 'edge'],  # Browser cookies dan foydalanish
+            'sleep_interval': 1,  # So'rovlar orasida 1 soniya kutish
+            'max_sleep_interval': 5,  # Maksimal kutish vaqti
         }
         
         # FFmpeg mavjudligini tekshirish va opsiyalar qo'shish
@@ -127,6 +139,12 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             ydl_opts['format'] = 'best[height<=720][filesize<50M]+bestaudio/best[filesize<50M]/best'
         else:
             logger.warning("FFmpeg not found. The downloaded format may not be the best available.")
+        
+        # Instagram uchun qo'shimcha format sozlamalari
+        if 'instagram.com' in url or 'instagr.am' in url:
+            ydl_opts['format'] = 'best[height<=720]/best[height<=480]/best'
+            ydl_opts['writesubtitles'] = False
+            ydl_opts['writeautomaticsub'] = False
         
         # Jarayonni yangilash
         await progress_message.edit_text("🔍 Video tahlil qilinmoqda...")
@@ -213,15 +231,47 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                     "Men YouTube, Vimeo, Twitter, Instagram, TikTok va minglab boshqa saytlarni qo'llab-quvvatlayman."
                 )
         elif 'HTTP Error 403' in error_msg:
-            await progress_message.edit_text(
-                "❌ Ushbu videoga kirish rad etildi. U shaxsiy yoki mintaqaviy cheklangan bo'lishi mumkin."
-            )
+            if 'instagram.com' in url or 'instagr.am' in url:
+                await progress_message.edit_text(
+                    "❌ Instagram video yuklab olishda kirish rad etildi.\n"
+                    "Bu Instagram'ning xavfsizlik siyosati tufayli bo'lishi mumkin.\n"
+                    "Iltimos, quyidagilarni sinab ko'ring:\n"
+                    "• Video ochiq ekanligini tekshiring\n"
+                    "• Video egasi tomonidan cheklangan bo'lishi mumkin\n"
+                    "• Bir necha daqiqa kutib, qayta urinib ko'ring"
+                )
+            else:
+                await progress_message.edit_text(
+                    "❌ Ushbu videoga kirish rad etildi. U shaxsiy yoki mintaqaviy cheklangan bo'lishi mumkin."
+                )
         elif 'Requested format is not available' in error_msg:
-            # Instagram va boshqa platformalar uchun format mavjud emasligi
+            # Instagram uchun maxsus xabar
+            if 'instagram.com' in url or 'instagr.am' in url:
+                await progress_message.edit_text(
+                    "❌ Instagram video yuklab olishda muammo yuz berdi.\n"
+                    "Bu Instagram'ning cheklovlari tufayli bo'lishi mumkin.\n"
+                    "Iltimos, quyidagilarni sinab ko'ring:\n"
+                    "• Video ochiq ekanligini tekshiring\n"
+                    "• Bir necha daqiqa kutib, qayta urinib ko'ring\n"
+                    "• Boshqa Instagram video manzilini sinab ko'ring"
+                )
+            else:
+                await progress_message.edit_text(
+                    "❌ Ushbu video uchun so'ralgan format mavjud emas.\n"
+                    "Bu ba'zi ijtimoiy tarmoq platformalarida yuzaga keladi.\n"
+                    "Iltimos, boshqa video manzilini yuboring."
+                )
+        elif 'instagram.com' in url or 'instagr.am' in url:
+            # Instagram uchun umumiy xato xabari
             await progress_message.edit_text(
-                "❌ Ushbu video uchun so'ralgan format mavjud emas.\n"
-                "Bu ba'zi Instagram yoki boshqa ijtimoiy tarmoq platformalarida yuzaga keladi.\n"
-                "Iltimos, boshqa video manzilini yuboring yoki platforma dasturidan foydalaning."
+                "❌ Instagram video yuklab olishda muammo yuz berdi.\n"
+                "Bu Instagram'ning cheklovlari tufayli bo'lishi mumkin.\n\n"
+                "💡 **Yechimlar:**\n"
+                "• Video ochiq ekanligini tekshiring\n"
+                "• Video egasi tomonidan cheklangan bo'lishi mumkin\n"
+                "• Bir necha daqiqa kutib, qayta urinib ko'ring\n"
+                "• Boshqa Instagram video manzilini sinab ko'ring\n"
+                "• Instagram Stories uchun maxsus cheklovlar mavjud"
             )
         else:
             await progress_message.edit_text(
