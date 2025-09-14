@@ -629,23 +629,18 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                         'platform_button_text': platform_button_text
                     }
                     
-                    # Tugmalar orqali foydalanuvchidan tanlov so'rash
+                    # Avval tugmalarni ko'rsatish
                     keyboard = [
                         [InlineKeyboardButton("📹 Faqat video", callback_data=f"insta_video_{user.id}")],
                         [InlineKeyboardButton("🎵 Video + Audio", callback_data=f"insta_both_{user.id}")]
                     ]
                     reply_markup = InlineKeyboardMarkup(keyboard)
                     
-                    # Avval video yuborish (caption bilan)
-                    await update.message.reply_video(
-                        video=video_file,
-                        caption=caption_text,
-                        supports_streaming=True
-                    )
+                    # Caption bilan birga xabar yuborish
+                    message_text = f"Instagram video tayyor. Qaysi formatda yuborishni xohlaysiz?\n\n{caption_text}"
                     
-                    # So'ng tanlov tugmasini yuborish
                     await update.message.reply_text(
-                        "Instagram video yuklandi. Audio ham ajratib olishni xohlaysizmi?",
+                        message_text,
                         reply_markup=reply_markup
                     )
                 else:
@@ -776,6 +771,9 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 
                 await query.edit_message_text("🎵 Instagram videodan audio ajratish jarayoni boshlanmoqda...")
                 
+                # Avval video yuborish
+                caption_text = f"{platform_sticker} {platform_button_text} (Video): {video_title}"
+                
                 # Original video ma'lumotlarini olish
                 subtitle_info = ""
                 
@@ -790,6 +788,44 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                         if len(parts) > 1:
                             video_title = parts[1].rsplit('.', 1)[0]  # Kengaytmasiz
                 
+                # Instagram caption mavjud bo'lsa, uni ham qo'shish
+                if info_dict.get('description'):
+                    instagram_caption = info_dict.get('description', '')
+                    if instagram_caption and len(instagram_caption) > 0:
+                        subtitle_info += "\n\n📢 Instagram Caption:\n"
+                        # Caption uzunligini cheklash
+                        if len(instagram_caption) > 300:
+                            subtitle_info += instagram_caption[:300] + "..."
+                        else:
+                            subtitle_info += instagram_caption
+                        
+                        # Agar tarjima mavjud bo'lsa
+                        if TRANSLATION_AVAILABLE:
+                            try:
+                                translated_caption = translate_text(instagram_caption, 'uz')
+                                if translated_caption and translated_caption != instagram_caption:
+                                    subtitle_info += f"\n\n🔄 Tarjima:\n{translated_caption[:300]}{'...' if len(translated_caption) > 300 else ''}"
+                            except Exception as e:
+                                logger.error(f"Tarjima xatosi: {str(e)}")
+                
+                # Caption uzunligini tekshirish
+                if subtitle_info:
+                    if len(caption_text + subtitle_info) <= 1024:
+                        caption_text += subtitle_info
+                    else:
+                        # Agar caption juda uzun bo'lsa, qisqartirish
+                        available_length = 1024 - len(caption_text) - 50
+                        if available_length > 100:
+                            caption_text += subtitle_info[:available_length] + "..."
+                
+                # Video faylni yuborish
+                with open(video_filename, 'rb') as video_file:
+                    await query.message.reply_video(
+                        video=video_file,
+                        caption=caption_text,
+                        supports_streaming=True
+                    )
+                
                 # Audio ajratish
                 if check_ffmpeg_available():
                     audio_path = extract_audio_from_video(video_filename)
@@ -800,27 +836,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                         
                         audio_caption = f"{platform_sticker} {platform_button_text} (Audio): {video_title}"
                         
-                        # Instagram caption mavjud bo'lsa, uni ham qo'shish
-                        if info_dict.get('description'):
-                            instagram_caption = info_dict.get('description', '')
-                            if instagram_caption and len(instagram_caption) > 0:
-                                subtitle_info += "\n\n📢 Instagram Caption:\n"
-                                # Caption uzunligini cheklash
-                                if len(instagram_caption) > 300:
-                                    subtitle_info += instagram_caption[:300] + "..."
-                                else:
-                                    subtitle_info += instagram_caption
-                                
-                                # Agar tarjima mavjud bo'lsa
-                                if TRANSLATION_AVAILABLE:
-                                    try:
-                                        translated_caption = translate_text(instagram_caption, 'uz')
-                                        if translated_caption and translated_caption != instagram_caption:
-                                            subtitle_info += f"\n\n🔄 Tarjima:\n{translated_caption[:300]}{'...' if len(translated_caption) > 300 else ''}"
-                                    except Exception as e:
-                                        logger.error(f"Tarjima xatosi: {str(e)}")
-                        
-                        # Caption uzunligini tekshirish
+                        # Audio uchun ham caption qo'shish
                         if subtitle_info:
                             if len(audio_caption + subtitle_info) <= 1024:
                                 audio_caption += subtitle_info
@@ -861,7 +877,64 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             else:
                 await query.edit_message_text("❌ Video fayl topilmadi. Iltimos, avval video yuklang.")
         elif action == "video":
-            await query.edit_message_text("📹 Faqat video yuborildi.")
+            # Faqat video yuborish
+            if user_id in instagram_video_files:
+                video_data = instagram_video_files[user_id]
+                video_filename = video_data['video']
+                info_dict = video_data['info']
+                video_title = video_data['title']
+                platform_sticker = video_data['platform_sticker']
+                platform_button_text = video_data['platform_button_text']
+                
+                # Video caption tayyorlash
+                caption_text = f"{platform_sticker} {platform_button_text} (Video): {video_title}"
+                
+                # Instagram caption mavjud bo'lsa, uni ham qo'shish
+                subtitle_info = ""
+                if info_dict.get('description'):
+                    instagram_caption = info_dict.get('description', '')
+                    if instagram_caption and len(instagram_caption) > 0:
+                        subtitle_info += "\n\n📢 Instagram Caption:\n"
+                        # Caption uzunligini cheklash
+                        if len(instagram_caption) > 300:
+                            subtitle_info += instagram_caption[:300] + "..."
+                        else:
+                            subtitle_info += instagram_caption
+                        
+                        # Agar tarjima mavjud bo'lsa
+                        if TRANSLATION_AVAILABLE:
+                            try:
+                                translated_caption = translate_text(instagram_caption, 'uz')
+                                if translated_caption and translated_caption != instagram_caption:
+                                    subtitle_info += f"\n\n🔄 Tarjima:\n{translated_caption[:300]}{'...' if len(translated_caption) > 300 else ''}"
+                            except Exception as e:
+                                logger.error(f"Tarjima xatosi: {str(e)}")
+                
+                # Caption uzunligini tekshirish
+                if subtitle_info:
+                    if len(caption_text + subtitle_info) <= 1024:
+                        caption_text += subtitle_info
+                    else:
+                        # Agar caption juda uzun bo'lsa, qisqartirish
+                        available_length = 1024 - len(caption_text) - 50
+                        if available_length > 100:
+                            caption_text += subtitle_info[:available_length] + "..."
+                
+                # Video faylni yuborish
+                with open(video_filename, 'rb') as video_file:
+                    await query.message.reply_video(
+                        video=video_file,
+                        caption=caption_text,
+                        supports_streaming=True
+                    )
+                
+                await query.edit_message_text("📹 Video yuborildi!")
+                
+                # Video fayl ma'lumotlarini o'chirish
+                if user_id in instagram_video_files:
+                    del instagram_video_files[user_id]
+            else:
+                await query.edit_message_text("❌ Video fayl topilmadi.")
         return
     
     if data.startswith("platform_"):
