@@ -341,15 +341,12 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     progress_message = await update.message.reply_text(f"{platform_sticker} So'rovingiz qayta ishlanmoqda...")
     
     try:
-        # yt-dlp opsiyalarini sozlash - YouTube uchun maxsus sozlamalar
+        # yt-dlp opsiyalarini sozlash
         ydl_opts = {
             'outtmpl': os.path.join(DOWNLOADS_DIR, f'{user.id}_%(title)s.%(ext)s'),
             'format': 'best[height<=720]/best[height<=480]/best',
             'sleep_interval': 1,
             'max_sleep_interval': 5,
-            'retries': 3,
-            'fragment_retries': 3,
-            'socket_timeout': 30,
         }
         
         # YouTube uchun maxsus headerlar va user agentlar
@@ -789,11 +786,24 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             # Audio ajratish
             if user_id in instagram_video_files:
                 video_data = instagram_video_files[user_id]
-                video_filename = video_data['video']
-                info_dict = video_data['info']
-                video_title = video_data['title']
-                platform_sticker = video_data['platform_sticker']
-                platform_button_text = video_data['platform_button_text']
+                video_filename = video_data.get('video')
+                info_dict = video_data.get('info', {})
+                video_title = video_data.get('title', 'Instagram video')
+                platform_sticker = video_data.get('platform_sticker', '📸')
+                platform_button_text = video_data.get('platform_button_text', 'Instagram Videosi')
+                
+                # Video fayl nomi mavjudligini tekshirish
+                if not video_filename:
+                    await query.edit_message_text("❌ Video fayl nomi topilmadi. Iltimos, avval video yuklang.")
+                    return
+                
+                # Video fayl mavjudligini tekshirish
+                if not os.path.exists(video_filename):
+                    await query.edit_message_text(f"❌ Video fayl topilmadi: {video_filename}")
+                    # Ma'lumotlarni tozalash
+                    if user_id in instagram_video_files:
+                        del instagram_video_files[user_id]
+                    return
                 
                 await query.edit_message_text("🎵 Instagram videodan audio ajratish jarayoni boshlanmoqda...")
                 
@@ -845,12 +855,31 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                             caption_text += subtitle_info[:available_length] + "..."
                 
                 # Video faylni yuborish
-                with open(video_filename, 'rb') as video_file:
-                    await query.message.reply_video(
-                        video=video_file,
-                        caption=caption_text,
-                        supports_streaming=True
-                    )
+                # Avval fayl mavjudligini tekshirish
+                if not os.path.exists(video_filename):
+                    await query.edit_message_text(f"❌ Video fayl topilmadi: {video_filename}")
+                    # Ma'lumotlarni tozalash
+                    if user_id in instagram_video_files:
+                        del instagram_video_files[user_id]
+                    return
+                
+                try:
+                    with open(video_filename, 'rb') as video_file:
+                        await query.message.reply_video(
+                            video=video_file,
+                            caption=caption_text,
+                            supports_streaming=True
+                        )
+                except FileNotFoundError:
+                    await query.edit_message_text(f"❌ Video fayl topilmadi: {video_filename}")
+                    # Ma'lumotlarni tozalash
+                    if user_id in instagram_video_files:
+                        del instagram_video_files[user_id]
+                    return
+                except Exception as e:
+                    logger.error(f"Video yuborishda xatolik: {str(e)}")
+                    await query.edit_message_text(f"❌ Video yuborishda xatolik yuz berdi: {str(e)}")
+                    return
                 
                 # Audio ajratish
                 if check_ffmpeg_available():
@@ -917,11 +946,24 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             # Faqat video yuborish
             if user_id in instagram_video_files:
                 video_data = instagram_video_files[user_id]
-                video_filename = video_data['video']
-                info_dict = video_data['info']
-                video_title = video_data['title']
-                platform_sticker = video_data['platform_sticker']
-                platform_button_text = video_data['platform_button_text']
+                video_filename = video_data.get('video')
+                info_dict = video_data.get('info', {})
+                video_title = video_data.get('title', 'Instagram video')
+                platform_sticker = video_data.get('platform_sticker', '📸')
+                platform_button_text = video_data.get('platform_button_text', 'Instagram Videosi')
+                
+                # Video fayl nomi mavjudligini tekshirish
+                if not video_filename:
+                    await query.edit_message_text("❌ Video fayl nomi topilmadi.")
+                    return
+                
+                # Video fayl mavjudligini tekshirish
+                if not os.path.exists(video_filename):
+                    await query.edit_message_text(f"❌ Video fayl topilmadi: {video_filename}")
+                    # Ma'lumotlarni tozalash
+                    if user_id in instagram_video_files:
+                        del instagram_video_files[user_id]
+                    return
                 
                 # Video caption tayyorlash
                 caption_text = f"{platform_sticker} {platform_button_text} (Video): {video_title}"
