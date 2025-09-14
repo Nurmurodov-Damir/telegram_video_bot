@@ -119,32 +119,17 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     if user:
         welcome_message = (
-            f"👋 Hello {user.first_name}!
-
-"
-            "I am an advanced video bot that can download videos from various platforms.
-
-"
-            "📥 Just send me a video URL and I will download it for you.
-"
-            "✅ Supported Platforms:
-"
-            "• 🟥 YouTube
-"
-            "• 📸 Instagram
-"
-            "• 🎵 TikTok
-"
-            "• 🐦 Twitter/X
-"
-            "• 🔷 Vimeo
-"
-            "• 📘 Facebook
-
-"
-            "⚠️ Note: Videos larger than 50MB will be sent using special methods due to Telegram's limitations.
-
-"
+            f"👋 Hello {user.first_name}!\n\n"
+            "I am an advanced video bot that can download videos from various platforms.\n\n"
+            "📥 Just send me a video URL and I will download it for you.\n"
+            "✅ Supported Platforms:\n"
+            "• 🟥 YouTube\n"
+            "• 📸 Instagram\n"
+            "• 🎵 TikTok\n"
+            "• 🐦 Twitter/X\n"
+            "• 🔷 Vimeo\n"
+            "• 📘 Facebook\n\n"
+            "⚠️ Note: Videos larger than 50MB will be sent using special methods due to Telegram's limitations.\n\n"
             "👨‍💻 Author: N.Damir - Senior Developer"
         )
         if update.message:
@@ -166,49 +151,25 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a message when the command /help is issued."""
     help_text = (
-        "🤖 Video Downloader Bot Help
-
-"
-        "I can help you download videos from various platforms.
-
-"
-        "📥 How to use:
-"
-        "1. Send me the URL of the video you want to download.
-"
-        "2. Wait for me to process it and send the video back.
-
-"
-        "📋 Supported Platforms:
-"
-        "• 🟥 YouTube
-"
-        "• 📸 Instagram
-"
-        "• 🎵 TikTok
-"
-        "• 🐦 Twitter/X
-"
-        "• 🔷 Vimeo
-"
-        "• 📘 Facebook
-
-"
-        "⚠️ Limitations:
-"
-        "• Videos longer than 100 minutes cannot be downloaded.
-"
-        "• Videos larger than 50MB will be sent using special methods.
-"
-        "• Some sites may restrict downloads.
-
-"
-        "⌨️ Commands:
-"
-        "/start - Start the bot
-"
-        "/help - Show this help message
-"
+        "🤖 Video Downloader Bot Help\n\n"
+        "I can help you download videos from various platforms.\n\n"
+        "📥 How to use:\n"
+        "1. Send me the URL of the video you want to download.\n"
+        "2. Wait for me to process it and send the video back.\n\n"
+        "📋 Supported Platforms:\n"
+        "• 🟥 YouTube\n"
+        "• 📸 Instagram\n"
+        "• 🎵 TikTok\n"
+        "• 🐦 Twitter/X\n"
+        "• 🔷 Vimeo\n"
+        "• 📘 Facebook\n\n"
+        "⚠️ Limitations:\n"
+        "• Videos longer than 100 minutes cannot be downloaded.\n"
+        "• Videos larger than 50MB will be sent using special methods.\n"
+        "• Some sites may restrict downloads.\n\n"
+        "⌨️ Commands:\n"
+        "/start - Start the bot\n"
+        "/help - Show this help message\n"
         "/about - Show information about the bot"
     )
     if update.message:
@@ -217,32 +178,17 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 async def about_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a message with information about the bot."""
     about_text = (
-        "📹 Video Downloader Bot
-
-"
-        "This bot allows you to download videos from various platforms directly to Telegram.
-
-"
-        "🛠 Technologies Used:
-"
-        "• 🐍 python-telegram-bot
-"
-        "• 📥 yt-dlp
-"
-        "• 🌐 deep-translator (for translation)
-"
-        "• 😊 emoji (for stickers)
-
-"
-        "👨‍💻 Developer:
-"
-        "N.Damir - Senior Developer
-
-"
-        "🔒 Privacy:
-"
-        "No videos or personal information are stored on our servers.
-"
+        "📹 Video Downloader Bot\n\n"
+        "This bot allows you to download videos from various platforms directly to Telegram.\n\n"
+        "🛠 Technologies Used:\n"
+        "• 🐍 python-telegram-bot\n"
+        "• 📥 yt-dlp\n"
+        "• 🌐 deep-translator (for translation)\n"
+        "• 😊 emoji (for stickers)\n\n"
+        "👨‍💻 Developer:\n"
+        "N.Damir - Senior Developer\n\n"
+        "🔒 Privacy:\n"
+        "No videos or personal information are stored on our servers.\n"
         "All processing is done temporarily, and files are deleted after being sent."
     )
     if update.message:
