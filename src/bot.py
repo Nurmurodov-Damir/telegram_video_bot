@@ -10,6 +10,7 @@ import logging
 import os
 import hashlib
 import time
+import asyncio
 from dotenv import load_dotenv
 
 # .env faylini yuklash
@@ -303,10 +304,45 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         # Jarayonni yangilash
         await progress_message.edit_text(f"{platform_sticker} Video yuklab olinmoqda...")
         
-        # Videoni yuklab olish
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info_dict = ydl.extract_info(url, download=True)
-            video_filename = ydl.prepare_filename(info_dict)
+        # YouTube uchun maxsus urinishlar soni
+        max_attempts = 3 if 'youtube.com' in url or 'youtu.be' in url else 1
+        attempt = 0
+        download_success = False
+        
+        # YouTube uchun alternativ metodlar
+        youtube_alternatives = [
+            lambda opts: dict(opts, format='worst'),  # Eng past sifat
+            lambda opts: dict(opts, format='best[height<=480]'),  # 480p gacha
+            lambda opts: dict(opts, format='best[height<=360]'),  # 360p gacha
+        ]
+        
+        alt_index = 0
+        while attempt < max_attempts and not download_success:
+            try:
+                # Videoni yuklab olish
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    info_dict = ydl.extract_info(url, download=True)
+                    video_filename = ydl.prepare_filename(info_dict)
+                download_success = True
+            except yt_dlp.DownloadError as e:
+                attempt += 1
+                error_msg = str(e).lower()
+                
+                # YouTube bot yoki cheklov xatolari
+                if ('bot' in error_msg or '429' in error_msg or 'confirm you're not a bot' in error_msg) and 'youtube.com' in url:
+                    # Agar bu YouTube bot xatosi bo'lsa, alternativ metodlarni sinab ko'rish
+                    if alt_index < len(youtube_alternatives):
+                        ydl_opts = youtube_alternatives[alt_index](ydl_opts)
+                        alt_index += 1
+                        attempt = 0  # Urinishlar sonini qayta boshlash
+                        await progress_message.edit_text(f"{platform_sticker} YouTube cheklovi uchun alternativ usul sinab ko'rilmoqda...")
+                    else:
+                        raise e  # Barcha alternativ metodlar sinab ko'rilgandan keyin xatoni qaytarish
+                elif attempt >= max_attempts:
+                    raise e  # Oxirgi urinish ham muvaffaqiyatsiz bo'lsa, xatoni qaytarish
+                else:
+                    # Kutish va qayta urinish
+                    await asyncio.sleep(5)
         
         # Fayl mavjudligini tekshirish
         if not os.path.exists(video_filename):
@@ -444,22 +480,36 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                     "Kechirasiz, men bu saytdan yuklab olishni qo'llab-quvvatlamayman.\n"
                     "Men YouTube, Vimeo, Twitter, Instagram, TikTok va minglab boshqa saytlarni qo'llab-quvvatlayman."
                 )
-        elif 'Sign in to confirm you\'re not a bot' in error_msg:
+        # YouTube uchun maxsus xatolik xabari
+        if 'Sign in to confirm you're not a bot' in error_msg or 'bot' in error_msg.lower() or '429' in error_msg:
             # Railway deployment uchun maxsus xabar
             railway_msg = ""
             if os.getenv('RAILWAY_ENVIRONMENT'):
-                railway_msg = "\n\n📍 Railway deployment aniqlandi. " \
-                             "cookies.txt faylini Railway environment variables orqali sozlashni unutmang."
+                railway_msg = "
+
+📍 Railway deployment aniqlandi. " 
+                             "Ehtimol, Railway IP manzillari YouTube tomonidan cheklangan."
             
             await progress_message.edit_text(
-                "❌ YouTube bot tekshiruvi aniqlandi!\n\n"
-                "💡 Yechimlar:\n"
-                "1. Boshqa video manbasi tanlang\n"
-                "2. Administrator cookies.txt faylini yangilashini so'rang\n"
-                "3. Video manzilini tekshirib ko'ring\n\n"
-                "📢 YouTube hozirda avtomatik yuklab olishni cheklamoqda. " +
+                "❌ YouTube bot tekshiruvi aniqlandi!
+
+"
+                "💡 Yechimlar:
+"
+                "1. Boshqa video manbasi tanlang (Instagram, TikTok, Vimeo, Twitter)
+"
+                "2. Video manzilini tekshirib ko'ring
+"
+                "3. Mahalliy kompyuteringizda botni ishga tushiring
+
+"
+                "📢 YouTube hozirda avtomatik yuklab olishni faol cheklamoqda. "
                 "Bu xavfsizlik chorasi bo'lib, botlarning tizimdan foydalanishini oldini oladi." +
-                railway_msg
+                railway_msg +
+                "
+
+🔄 Tavsiya: Boshqa platformalardan video yuklab oling. "
+                "Instagram, TikTok va Vimeo saytlari YouTube qanday cheklovlarsiz ishlaydi."
             )
         else:
             await progress_message.edit_text(
