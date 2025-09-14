@@ -72,6 +72,31 @@ LOG_LEVEL=INFO
 python run_bot.py
 ```
 
+### **Railway.ga deploy qilish**
+
+1. **GitHub repository'sini Railway'ga ulang**
+2. **Environment variables qo'shing:**
+   - `TELEGRAM_BOT_TOKEN` - Telegram bot tokeningiz
+   - `COOKIES_CONTENT` - YouTube cookies fayli mazmuni (ixtiyoriy lekin tavsiya etiladi)
+
+3. **Cookies faylini qo'shish (YouTube uchun):**
+   - Brauzeringizga "Get cookies.txt" kengaytmasini o'rnating
+   - YouTube saytiga kirib, hisobingizga kiring
+   - cookies.txt faylini eksport qiling
+   - Uni Railway environment variables sifatida qo'shing:
+     - Key: `COOKIES_CONTENT`
+     - Value: cookies.txt fayli mazmuni
+
+4. **Build command:**
+```bash
+pip install -r requirements.txt
+```
+
+5. **Run command:**
+```bash
+python run_bot.py
+```
+
 ---
 
 ## 📱 **Ishlatish**

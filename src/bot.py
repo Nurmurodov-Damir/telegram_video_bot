@@ -218,23 +218,27 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         ydl_opts = {
             'outtmpl': os.path.join(DOWNLOADS_DIR, f'{user.id}_%(title)s.%(ext)s'),
             'format': 'best[height<=720]/best[height<=480]/best',
-            'extractor_args': {
-                'instagram': {
-                    'api': 'web',
-                    'include_ads': False,
-                    'include_paid_promotion': False,
-                }
-            },
             'sleep_interval': 1,
             'max_sleep_interval': 5,
-            # YouTube bot tekshiruvini o'tkazish uchun cookies fayli
-            'cookies': 'cookies.txt',  # cookies.txt faylini bir xil katalogga joylashtiring
-            # Subtitle yuklab olishni yoqish
-            'writesubtitles': True,
-            'writeautomaticsub': True,
-            'subtitleslangs': ['en', 'ru', 'uz', 'all'],
-            'skip_download': False,
         }
+        
+        # Proxy sozlamalari (agar mavjud bo'lsa)
+        proxy_url = os.getenv('HTTP_PROXY') or os.getenv('HTTPS_PROXY')
+        if proxy_url:
+            ydl_opts['proxy'] = proxy_url
+            
+        # Cookies faylini sozlash (Railway uchun maxsus)
+        cookies_content = os.getenv('COOKIES_CONTENT')
+        if cookies_content:
+            # Railway uchun cookies faylini yaratish
+            cookies_path = os.path.join(DOWNLOADS_DIR, 'cookies.txt')
+            with open(cookies_path, 'w', encoding='utf-8') as f:
+                f.write(cookies_content)
+            ydl_opts['cookies'] = cookies_path
+        else:
+            # Lokal foydalanish uchun mavjud cookies.txt fayli
+            if os.path.exists('cookies.txt'):
+                ydl_opts['cookies'] = 'cookies.txt'
         
         # FFmpeg mavjudligini tekshirish va opsiyalar qo'shish
         import shutil
@@ -441,14 +445,21 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                     "Men YouTube, Vimeo, Twitter, Instagram, TikTok va minglab boshqa saytlarni qo'llab-quvvatlayman."
                 )
         elif 'Sign in to confirm you\'re not a bot' in error_msg:
+            # Railway deployment uchun maxsus xabar
+            railway_msg = ""
+            if os.getenv('RAILWAY_ENVIRONMENT'):
+                railway_msg = "\n\n📍 Railway deployment aniqlandi. " \
+                             "cookies.txt faylini Railway environment variables orqali sozlashni unutmang."
+            
             await progress_message.edit_text(
                 "❌ YouTube bot tekshiruvi aniqlandi!\n\n"
                 "💡 Yechimlar:\n"
                 "1. Boshqa video manbasi tanlang\n"
                 "2. Administrator cookies.txt faylini yangilashini so'rang\n"
                 "3. Video manzilini tekshirib ko'ring\n\n"
-                "📢 YouTube hozirda avtomatik yuklab olishni cheklamoqda. "
-                "Bu xavfsizlik chorasi bo'lib, botlarning tizimdan foydalanishini oldini oladi."
+                "📢 YouTube hozirda avtomatik yuklab olishni cheklamoqda. " +
+                "Bu xavfsizlik chorasi bo'lib, botlarning tizimdan foydalanishini oldini oladi." +
+                railway_msg
             )
         else:
             await progress_message.edit_text(
