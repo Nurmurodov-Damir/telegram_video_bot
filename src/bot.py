@@ -645,8 +645,8 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                     
                     # Avval tugmalarni ko'rsatish
                     keyboard = [
-                        [InlineKeyboardButton("📹 Faqat video", callback_data=f"insta_video_{user.id}")],
-                        [InlineKeyboardButton("🎵 Video + Audio", callback_data=f"insta_both_{user.id}")]
+                        [InlineKeyboardButton("📹 Faqat video", callback_data=f"insta_video_{int(user.id)}")],
+                        [InlineKeyboardButton("🎵 Video + Audio", callback_data=f"insta_both_{int(user.id)}")]
                     ]
                     reply_markup = InlineKeyboardMarkup(keyboard)
                     
@@ -780,7 +780,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     if data.startswith("insta_"):
         action_parts = data.split("_")
         action = action_parts[1]  # "video" yoki "both"
-        user_id = user.id
+        user_id = int(user.id)  # Integerga o'tkazish
         
         if action == "both":
             # Audio ajratish
