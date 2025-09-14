@@ -132,6 +132,23 @@ def extract_audio_from_video(video_path):
         logger.error(f"Audio ajratishda istisno: {str(e)}")
         return None
 
+def translate_text(text, target_lang='uz'):
+    """Matnni berilgan tilga tarjima qilish."""
+    if not TRANSLATION_AVAILABLE or not text:
+        return text
+    
+    try:
+        # Matn uzunligini tekshirish (Google Translate limiti)
+        if len(text) > 5000:
+            text = text[:5000]  # Matnni qisqartirish
+            
+        # Matnni tarjima qilish
+        translated = GoogleTranslator(source='auto', target=target_lang).translate(text)
+        return translated
+    except Exception as e:
+        logger.error(f"Tarjima xatosi: {str(e)}")
+        return text  # Xatolik yuz bersa, original matnni qaytarish
+
 async def send_instagram_content_separately(update, video_filename, info_dict, platform_sticker, platform_button_text):
     """Instagram video va audioni alohida yuborish."""
     try:
@@ -752,7 +769,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         )
 
 # Global o'zgaruvchilar
-instagram_video_files = {}  # {user_id: {'video': video_filename, 'info': info_dict}}
+instagram_video_files = {}  # {user_id: {'video': video_filename, 'info': info_dict, 'title': video_title, 'platform_sticker': platform_sticker, 'platform_button_text': platform_button_text}}
 
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Tugma bosilganda ishlov berish."""
@@ -837,40 +854,51 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 
                 # Audio ajratish
                 if check_ffmpeg_available():
-                    audio_path = extract_audio_from_video(video_filename)
-                    if audio_path and os.path.exists(audio_path):
-                        # Audio fayl hajmini tekshirish
-                        audio_size = os.path.getsize(audio_path)
-                        max_size = int(os.getenv("MAX_VIDEO_SIZE", "52428800"))  # 50MB
-                        
-                        audio_caption = f"{platform_sticker} {platform_button_text} (Audio): {video_title}"
-                        
-                        # Audio uchun ham caption qo'shish
-                        if subtitle_info:
-                            if len(audio_caption + subtitle_info) <= 1024:
-                                audio_caption += subtitle_info
+                    try:
+                        audio_path = extract_audio_from_video(video_filename)
+                        if audio_path and os.path.exists(audio_path):
+                            # Audio fayl hajmini tekshirish
+                            audio_size = os.path.getsize(audio_path)
+                            max_size = int(os.getenv("MAX_VIDEO_SIZE", "52428800"))  # 50MB
+                            
+                            audio_caption = f"{platform_sticker} {platform_button_text} (Audio): {video_title}"
+                            
+                            # Audio uchun ham caption qo'shish
+                            if subtitle_info:
+                                if len(audio_caption + subtitle_info) <= 1024:
+                                    audio_caption += subtitle_info
+                                else:
+                                    # Agar caption juda uzun bo'lsa, qisqartirish
+                                    available_length = 1024 - len(audio_caption) - 50
+                                    if available_length > 100:
+                                        audio_caption += subtitle_info[:available_length] + "..."
+                            
+                            if audio_size <= max_size:
+                                try:
+                                    with open(audio_path, 'rb') as audio_file:
+                                        await query.message.reply_audio(
+                                            audio=audio_file,
+                                            title=f"{video_title} (Audio)",
+                                            caption=audio_caption
+                                        )
+                                    # Audio faylni o'chirish
+                                    try:
+                                        os.remove(audio_path)
+                                    except Exception as e:
+                                        logger.error(f"Audio faylni o'chirishda xatolik: {str(e)}")
+                                except Exception as e:
+                                    logger.error(f"Audio yuborishda xatolik: {str(e)}")
+                                    await query.message.reply_text(f"❌ Audio yuborishda xatolik yuz berdi: {str(e)}")
                             else:
-                                # Agar caption juda uzun bo'lsa, qisqartirish
-                                available_length = 1024 - len(audio_caption) - 50
-                                if available_length > 100:
-                                    audio_caption += subtitle_info[:available_length] + "..."
-                        
-                        if audio_size <= max_size:
-                            with open(audio_path, 'rb') as audio_file:
-                                await query.message.reply_audio(
-                                    audio=audio_file,
-                                    title=f"{video_title} (Audio)",
-                                    caption=audio_caption
+                                await query.message.reply_text(
+                                    f"❌ Audio fayl juda katta ({audio_size / (1024*1024):.1f}MB). "
+                                    f"Telegram faqat {max_size / (1024*1024):.0f}MB gacha fayllarni yuborishga ruxsat beradi."
                                 )
-                            # Audio faylni o'chirish
-                            os.remove(audio_path)
                         else:
-                            await query.message.reply_text(
-                                f"❌ Audio fayl juda katta ({audio_size / (1024*1024):.1f}MB). "
-                                f"Telegram faqat {max_size / (1024*1024):.0f}MB gacha fayllarni yuborishga ruxsat beradi."
-                            )
-                    else:
-                        await query.message.reply_text("❌ Audioni ajratishda xatolik yuz berdi.")
+                            await query.message.reply_text("❌ Audioni ajratishda xatolik yuz berdi.")
+                    except Exception as e:
+                        logger.error(f"Audio ajratishda xatolik: {str(e)}")
+                        await query.message.reply_text(f"❌ Audio ajratishda xatolik yuz berdi: {str(e)}")
                 else:
                     await query.message.reply_text(
                         "❌ FFmpeg o'rnatilmagan. Audio ajratish uchun FFmpeg kerak.\n\n"
@@ -933,14 +961,23 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 
                 # Video faylni yuborish
                 try:
-                    with open(video_filename, 'rb') as video_file:
-                        await query.message.reply_video(
-                            video=video_file,
-                            caption=caption_text,
-                            supports_streaming=True
-                        )
-                    
-                    await query.edit_message_text("📹 Video yuborildi!")
+                    if os.path.exists(video_filename):
+                        with open(video_filename, 'rb') as video_file:
+                            await query.message.reply_video(
+                                video=video_file,
+                                caption=caption_text,
+                                supports_streaming=True
+                            )
+                        
+                        await query.edit_message_text("📹 Video yuborildi!")
+                        
+                        # Video faylni o'chirish
+                        try:
+                            os.remove(video_filename)
+                        except Exception as e:
+                            logger.error(f"Video faylni o'chirishda xatolik: {str(e)}")
+                    else:
+                        await query.edit_message_text(f"❌ Video fayl topilmadi: {video_filename}")
                 except Exception as e:
                     logger.error(f"Video yuborishda xatolik: {str(e)}")
                     await query.edit_message_text(f"❌ Video yuborishda xatolik yuz berdi: {str(e)}")
