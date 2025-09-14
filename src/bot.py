@@ -536,6 +536,9 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         with open(video_filename, 'rb') as video_file:
             caption_text = f"{platform_sticker} {platform_button_text}: {video_title}"
             
+            # Subtitle mavjudligini tekshirish va tarjima qilish
+            subtitle_info = ""
+            
             # Instagram uchun maxsus caption tekshiruvi
             if 'instagram.com' in url or 'instagr.am' in url:
                 # Instagram captionlarini tekshirish
