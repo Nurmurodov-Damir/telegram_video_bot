@@ -229,6 +229,11 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             'max_sleep_interval': 5,
             # YouTube bot tekshiruvini o'tkazish uchun cookies fayli
             'cookies': 'cookies.txt',  # cookies.txt faylini bir xil katalogga joylashtiring
+            # Subtitle yuklab olishni yoqish
+            'writesubtitles': True,
+            'writeautomaticsub': True,
+            'subtitleslangs': ['en', 'ru', 'uz', 'all'],
+            'skip_download': False,
         }
         
         # FFmpeg mavjudligini tekshirish va opsiyalar qo'shish
@@ -241,8 +246,9 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         # Instagram uchun qo'shimcha format sozlamalari
         if 'instagram.com' in url or 'instagr.am' in url:
             ydl_opts['format'] = 'best[height<=720]/best[height<=480]/best'
-            ydl_opts['writesubtitles'] = False
-            ydl_opts['writeautomaticsub'] = False
+            ydl_opts['writesubtitles'] = True
+            ydl_opts['writeautomaticsub'] = True
+            ydl_opts['subtitleslangs'] = ['en', 'ru', 'uz', 'all']
         
         # Jarayonni yangilash
         await progress_message.edit_text(f"{platform_sticker} Video tahlil qilinmoqda...")
@@ -309,6 +315,42 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         with open(video_filename, 'rb') as video_file:
             caption_text = f"{platform_sticker} {platform_button_text}: {video_title}"
             
+            # Subtitle mavjudligini tekshirish va tarjima qilish
+            subtitle_info = ""
+            if info_dict.get('subtitles') or info_dict.get('automatic_captions'):
+                subtitle_info += "\n\n📢 Subtitles:\n"
+                subtitles = info_dict.get('subtitles', {})
+                auto_captions = info_dict.get('automatic_captions', {})
+                
+                # Avtomatik subtitlelar mavjudligini tekshirish
+                if auto_captions:
+                    subtitle_info += "🤖 Avtomatik titrlar mavjud\n"
+                elif subtitles:
+                    subtitle_info += "📝 Qo'lda titrlar mavjud\n"
+                
+                # Agar tarjima mavjud bo'lsa
+                if TRANSLATION_AVAILABLE:
+                    try:
+                        description = info_dict.get('description', '')
+                        if description and len(description) > 0:
+                            # Izoh uchun tarjima
+                            translated_desc = translate_text(description, 'uz')
+                            if translated_desc and translated_desc != description:
+                                subtitle_info += f"\n🔄 Tarjima:\n{translated_desc[:200]}{'...' if len(translated_desc) > 200 else ''}"
+                    except Exception as e:
+                        logger.error(f"Tarjima xatosi: {str(e)}")
+
+            # Subtitle ma'lumotini captionga qo'shish
+            if subtitle_info:
+                # Caption uzunligini tekshirish (Telegram limiti 1024 belgi)
+                if len(caption_text + subtitle_info) <= 1024:
+                    caption_text += subtitle_info
+                else:
+                    # Agar caption juda uzun bo'lsa, qisqartirish
+                    available_length = 1024 - len(caption_text) - 50  # 50 belgi rezerv
+                    if available_length > 100:
+                        caption_text += subtitle_info[:available_length] + "..."
+
             await update.message.reply_video(
                 video=video_file,
                 caption=caption_text,
