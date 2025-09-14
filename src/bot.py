@@ -215,13 +215,56 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     progress_message = await update.message.reply_text(f"{platform_sticker} So'rovingiz qayta ishlanmoqda...")
     
     try:
-        # yt-dlp opsiyalarini sozlash
+        # yt-dlp opsiyalarini sozlash - YouTube uchun maxsus sozlamalar
         ydl_opts = {
             'outtmpl': os.path.join(DOWNLOADS_DIR, f'{user.id}_%(title)s.%(ext)s'),
             'format': 'best[height<=720]/best[height<=480]/best',
             'sleep_interval': 1,
             'max_sleep_interval': 5,
+            'retries': 3,
+            'fragment_retries': 3,
+            'socket_timeout': 30,
         }
+        
+        # YouTube uchun maxsus headerlar va user agentlar
+        if 'youtube.com' in url or 'youtu.be' in url:
+            # User agentlar ro'yxati - detectionni chetlab o'tish uchun
+            user_agents = [
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/121.0',
+                'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            ]
+            
+            # Tasodifiy user agent tanlash
+            import random
+            random_user_agent = random.choice(user_agents)
+            
+            ydl_opts.update({
+                'http_headers': {
+                    'User-Agent': random_user_agent,
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                    'Accept-Language': 'en-US,en;q=0.5',
+                    'Accept-Encoding': 'gzip, deflate',
+                    'Connection': 'keep-alive',
+                    'Referer': 'https://www.google.com/',
+                },
+                'nocheckcertificate': True,
+                'prefer_ffmpeg': True,
+                'keepvideo': False,
+                'noplaylist': True,
+                # YouTube extractors
+                'extractor_args': {
+                    'youtube': {
+                        'skip': ['dash', 'hls'],  # Murakkab formatlarni o'tkazib yuborish
+                        'player_skip': ['configs', 'webpage'],  # Player konfiguratsiyasini o'tkazib yuborish
+                    }
+                }
+            })
+            
+            # YouTube uchun qo'shimcha opsiyalar
+            ydl_opts['youtube_include_dash_manifest'] = False
+            ydl_opts['youtube_include_hls_manifest'] = False
         
         # Proxy sozlamalari (agar mavjud bo'lsa)
         proxy_url = os.getenv('HTTP_PROXY') or os.getenv('HTTPS_PROXY')
@@ -304,7 +347,7 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         # Jarayonni yangilash
         await progress_message.edit_text(f"{platform_sticker} Video yuklab olinmoqda...")
         
-        # YouTube uchun maxsus urinishlar soni
+        # YouTube uchun maxsus urinishlar soni va kechikishlar
         max_attempts = 3 if 'youtube.com' in url or 'youtu.be' in url else 1
         attempt = 0
         download_success = False
@@ -316,33 +359,47 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             lambda opts: dict(opts, format='best[height<=360]'),  # 360p gacha
         ]
         
+        # Kechikish strategiyalari
+        delay_strategies = [1, 3, 5]  # Turli darajadagi kechikishlar
+        
         alt_index = 0
         while attempt < max_attempts and not download_success:
             try:
+                # Har bir urinishda tasodifiy kechikish
+                if attempt > 0:
+                    import random
+                    delay = random.choice(delay_strategies)
+                    logger.info(f"YouTube uchun {delay} soniya kutish (urinish: {attempt + 1})")
+                    await asyncio.sleep(delay)
+                
                 # Videoni yuklab olish
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    logger.info(f"Video yuklab olishga harakat qilinmoqda: {url}")
                     info_dict = ydl.extract_info(url, download=True)
                     video_filename = ydl.prepare_filename(info_dict)
+                    logger.info(f"Video muvaffaqiyatli yuklab olindi: {video_filename}")
                 download_success = True
             except yt_dlp.DownloadError as e:
                 attempt += 1
                 error_msg = str(e).lower()
+                logger.error(f"Yuklab olish xatosi (urinish {attempt}): {error_msg}")
                 
                 # YouTube bot yoki cheklov xatolari
-                if ('bot' in error_msg or '429' in error_msg or 'confirm you\'re not a bot' in error_msg) and 'youtube.com' in url:
+                if ('bot' in error_msg or '429' in error_msg or 'confirm you\'re not a bot' in error_msg or 'sign in' in error_msg) and ('youtube.com' in url or 'youtu.be' in url):
                     # Agar bu YouTube bot xatosi bo'lsa, alternativ metodlarni sinab ko'rish
                     if alt_index < len(youtube_alternatives):
                         ydl_opts = youtube_alternatives[alt_index](ydl_opts)
                         alt_index += 1
                         attempt = 0  # Urinishlar sonini qayta boshlash
                         await progress_message.edit_text(f"{platform_sticker} YouTube cheklovi uchun alternativ usul sinab ko'rilmoqda...")
+                        logger.info(f"YouTube uchun alternativ format sinab ko'rilmoqda (index: {alt_index})")
                     else:
                         raise e  # Barcha alternativ metodlar sinab ko'rilgandan keyin xatoni qaytarish
                 elif attempt >= max_attempts:
                     raise e  # Oxirgi urinish ham muvaffaqiyatsiz bo'lsa, xatoni qaytarish
                 else:
                     # Kutish va qayta urinish
-                    await asyncio.sleep(5)
+                    logger.info(f"Qayta urinish uchun kutish: {attempt + 1}/{max_attempts}")
         
         # Fayl mavjudligini tekshirish
         if not os.path.exists(video_filename):
@@ -480,11 +537,20 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                     "Kechirasiz, men bu saytdan yuklab olishni qo'llab-quvvatlamayman.\n"
                     "Men YouTube, Vimeo, Twitter, Instagram, TikTok va minglab boshqa saytlarni qo'llab-quvvatlayman."
                 )
-        elif 'Sign in to confirm you\'re not a bot' in error_msg or 'bot' in error_msg.lower() or '429' in error_msg:
+        elif 'Sign in to confirm you\'re not a bot' in error_msg or 'bot' in error_msg.lower() or '429' in error_msg or 'unable to download webpage' in error_msg.lower():
             # Railway deployment uchun maxsus xabar
             railway_msg = ""
             if os.getenv('RAILWAY_ENVIRONMENT'):
                 railway_msg = "\n\nRailway deployment aniqlandi. Ehtimol, Railway IP manzillari YouTube tomonidan cheklangan."
+            
+            # YouTube maxsus yechimlar
+            youtube_solutions = ""
+            if 'youtube.com' in url or 'youtu.be' in url:
+                youtube_solutions = "\n\n🔧 YouTube uchun tavsiyalar:\n" \
+                                  "• cookies.txt faylini qo'shing (YouTube hisobingizdan)\n" \
+                                  "• Proxy serverdan foydalaning\n" \
+                                  "• Video manzilini tekshiring\n" \
+                                  "• Boshqa video manbasidan foydalaning"
             
             await progress_message.edit_text(
                 "❌ YouTube bot tekshiruvi aniqlandi!\n\n"
@@ -495,7 +561,8 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 "📢 YouTube hozirda avtomatik yuklab olishni faol cheklamoqda. "
                 "Bu xavfsizlik chorasi bo'lib, botlarning tizimdan foydalanishini oldini oladi." +
                 railway_msg +
-                "\n\nTavsiya: Boshqa platformalardan video yuklab oling. "
+                youtube_solutions +
+                "\n\n🔄 Tavsiya: Boshqa platformalardan video yuklab oling. "
                 "Instagram, TikTok va Vimeo saytlari YouTube qanday cheklovlarsiz ishlaydi."
             )
         else:
