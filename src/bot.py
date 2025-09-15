@@ -433,47 +433,13 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             'max_sleep_interval': 5,
         }
         
-        # YouTube uchun maxsus headerlar va user agentlar
+        # YouTube uchun maxsus sozlamalar
         if 'youtube.com' in url or 'youtu.be' in url:
-            # YouTube cookies faylini tekshirish
-            cookies_file = check_and_create_cookies_file()
-            if cookies_file:
-                ydl_opts['cookiefile'] = cookies_file
-                logger.info(f"YouTube cookies fayli qo'shildi: {cookies_file}")
+            # YouTube helper dan opsiyalarni olish
+            ydl_opts = youtube_helper.get_youtube_options(url)
             
-            # User agentlar ro'yxati - detectionni chetlab o'tish uchun
-            user_agents = [
-                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/121.0',
-                'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            ]
-            
-            # Tasodifiy user agent tanlash
-            import random
-            random_user_agent = random.choice(user_agents)
-            
-            ydl_opts.update({
-                'http_headers': {
-                    'User-Agent': random_user_agent,
-                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-                    'Accept-Language': 'en-US,en;q=0.5',
-                    'Accept-Encoding': 'gzip, deflate',
-                    'Connection': 'keep-alive',
-                    'Referer': 'https://www.google.com/',
-                },
-                'nocheckcertificate': True,
-                'prefer_ffmpeg': True,
-                'keepvideo': False,
-                'noplaylist': True,
-                # YouTube extractors
-                'extractor_args': {
-                    'youtube': {
-                        'skip': ['dash', 'hls'],  # Murakkab formatlarni o'tkazib yuborish
-                        'player_skip': ['configs', 'webpage'],  # Player konfiguratsiyasini o'tkazib yuborish
-                    }
-                }
-            })
+            # Cookies faylini qo'shish (agar mavjud bo'lsa)
+            ydl_opts = youtube_helper.add_cookies_to_options(ydl_opts)
             
             # YouTube uchun qo'shimcha opsiyalar
             ydl_opts['youtube_include_dash_manifest'] = False
@@ -483,16 +449,32 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             ydl_opts['format'] = 'bestvideo[height<=720]+bestaudio/best[height<=720]/bestvideo[height<=480]+bestaudio/best[height<=480]/best'
             
             # YouTube bot yoki cheklov xatolari uchun qayta urinish strategiyalari
-            youtube_alternatives = [
-                # 1. Oddiy formatlar
-                lambda opts: dict(opts, format='worst'),
-                # 2. Faqat video (bez audio)
-                lambda opts: dict(opts, format='best[height<=480]'),
-                # 3. Faqat video (past sifat)
-                lambda opts: dict(opts, format='best[height<=360]'),
-                # 4. Mobil formatlar
-                lambda opts: dict(opts, format='mp4[height<=480]'),
-            ]
+            youtube_alternatives = youtube_helper.get_alternative_formats()
+        else:
+            # Boshqa platformalar uchun oddiy sozlamalar
+            ydl_opts.update({
+                'format': 'best[height<=720]/best[height<=480]/best',
+                'sleep_interval': 1,
+                'max_sleep_interval': 5,
+            })
+            
+            # Proxy sozlamalari (agar mavjud bo'lsa)
+            proxy_url = os.getenv('HTTP_PROXY') or os.getenv('HTTPS_PROXY')
+            if proxy_url:
+                ydl_opts['proxy'] = proxy_url
+                
+            # Cookies faylini sozlash (Railway uchun maxsus)
+            cookies_content = os.getenv('COOKIES_CONTENT')
+            if cookies_content:
+                # Railway uchun cookies faylini yaratish
+                cookies_path = os.path.join(DOWNLOADS_DIR, 'cookies.txt')
+                with open(cookies_path, 'w', encoding='utf-8') as f:
+                    f.write(cookies_content)
+                ydl_opts['cookies'] = cookies_path
+            else:
+                # Lokal foydalanish uchun mavjud cookies.txt fayli
+                if os.path.exists('cookies.txt'):
+                    ydl_opts['cookies'] = 'cookies.txt'
         
         # Proxy sozlamalari (agar mavjud bo'lsa)
         proxy_url = os.getenv('HTTP_PROXY') or os.getenv('HTTPS_PROXY')
@@ -578,13 +560,20 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         # YouTube uchun maxsus yuklab olish
         if 'youtube.com' in url or 'youtu.be' in url:
             try:
-                info_dict, video_filename = await download_with_youtube_retry(url, ydl_opts, progress_message)
+                info_dict, video_filename = await youtube_helper.download_with_youtube_retry(url, ydl_opts, progress_message)
             except Exception as e:
                 logger.error(f"YouTube yuklab olishda xatolik: {str(e)}")
-                await progress_message.edit_text(
-                    f"Kechirasiz, men YouTube videosini yuklab ololmadim.\n"
-                    f"Xato: {str(e)[:200]}..."
-                )
+                
+                # YouTube bot xatolarini tekshirish
+                error_msg = str(e).lower()
+                if youtube_helper.is_youtube_bot_error(error_msg):
+                    # YouTube bot xatolari uchun maxsus xabar
+                    await progress_message.edit_text(youtube_helper.get_youtube_error_message())
+                else:
+                    await progress_message.edit_text(
+                        f"Kechirasiz, men YouTube videosini yuklab ololmadim.\n"
+                        f"Xato: {str(e)[:200]}..."
+                    )
                 return
         else:
             # Boshqa platformalar uchun oddiy yuklab olish
@@ -676,10 +665,17 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                             logger.info(f"Qayta urinish uchun kutish: {attempt + 1}/{max_attempts}")
             except Exception as e:
                 logger.error(f"Yuklab olishda umumiy xatolik: {str(e)}")
-                await progress_message.edit_text(
-                    f"Kechirasiz, men videoni yuklab ololmadim.\n"
-                    f"Xato: {str(e)[:200]}..."
-                )
+                
+                # YouTube bot xatolarini tekshirish
+                error_msg = str(e).lower()
+                if youtube_helper.is_youtube_bot_error(error_msg) and ('youtube.com' in url or 'youtu.be' in url):
+                    # YouTube bot xatolari uchun maxsus xabar
+                    await progress_message.edit_text(youtube_helper.get_youtube_error_message())
+                else:
+                    await progress_message.edit_text(
+                        f"Kechirasiz, men videoni yuklab ololmadim.\n"
+                        f"Xato: {str(e)[:200]}..."
+                    )
                 return
         
         # Fayl mavjudligini tekshirish
@@ -899,6 +895,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
 # Global o'zgaruvchilar
 instagram_video_files = {}  # {user_id: {'video': video_filename, 'info': info_dict}}
+
+# YouTube helper import qilish
+from src.youtube_helper import youtube_helper
 
 # Button handler import qilish
 from src.buttons import button_handler
