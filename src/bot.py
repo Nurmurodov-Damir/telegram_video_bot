@@ -899,13 +899,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 # Global o'zgaruvchilar
 instagram_video_files = {}  # {user_id: {'video': video_filename, 'info': info_dict}}
 
-async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Tugma bosilganda ishlov berish."""
-    query = update.callback_query
-    await query.answer()
-    
-    # Tugma bosilganda oddiy xabar berish
-    await query.edit_message_text("❌ Bu funksiya hozircha mavjud emas. Iltimos, video URL manzilini bevosita yuboring.")
+# Button handler import qilish
+from src.buttons import button_handler
 
 def check_ffmpeg_available():
     """FFmpeg mavjudligini tekshirish."""
