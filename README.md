@@ -281,7 +281,7 @@ YouTube hozirda avtomatik yuklab olishni cheklamoqda. Bu xavfsizlik chorasi bo'l
 
 **Yechimlar:**
 1. **cookies.txt faylini yaratish:**
-   - Brauzeringizga "Get cookies.txt" kengaytmasini o'rnating
+   - Brauzeringizga "Get cookies.txt" kengaytmasini o'rnatish
    - YouTube saytiga kirib, hisobingizga kiring
    - cookies.txt faylini eksport qiling
    - Uni bot katalogiga joylashtiring
@@ -292,6 +292,39 @@ YouTube hozirda avtomatik yuklab olishni cheklamoqda. Bu xavfsizlik chorasi bo'l
 3. **Video manzilini tekshiring:**
    - URL to'g'ri ekanligiga ishonch hosil qiling
 </details>
+
+### YouTube Bot Tekshiruvini Chetlab O'tish
+
+YouTube hozirda avtomatik yuklab olishni faol cheklamoqda. Bu xavfsizlik chorasi bo'lib, botlarning tizimdan foydalanishini oldini oladi.
+
+#### Yechimlar:
+
+1. **Cookies faylidan foydalanish** (Eng samarali)
+2. **Proxy serverdan foydalanish**
+3. **Mahalliy kompyuteringizda botni ishga tushirish**
+
+##### 1. Cookies faylini yaratish:
+
+YouTube cookies faylini olish uchun:
+
+1. Brauzeringizga "Get cookies.txt" kengaytmasini o'rnating
+2. YouTube saytiga kiring va hisobingizga kiring
+3. Har qanday YouTube sahifasini oching
+4. Kengaytmani ishga tushiring va cookies faylini eksport qiling
+5. Uni `cookies.txt` sifatida saqlang va bot jildiga joylashtiring
+
+##### 2. Proxy serverdan foydalanish:
+
+Agar proxy serveringiz bo'lsa:
+```env
+HTTP_PROXY=http://proxy_server:port
+HTTPS_PROXY=https://proxy_server:port
+```
+
+##### 3. Mahalliy kompyuteringizda ishga tushirish:
+
+YouTube cheklovlari ko'pincha cloud hostinglardagi IP manzillarga qo'llaniladi.
+Mahalliy kompyuteringizning IP manzili cheklanmagan bo'lishi ehtimoliy.
 
 ---
 

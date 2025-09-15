@@ -435,6 +435,12 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         
         # YouTube uchun maxsus headerlar va user agentlar
         if 'youtube.com' in url or 'youtu.be' in url:
+            # YouTube cookies faylini tekshirish
+            cookies_file = check_and_create_cookies_file()
+            if cookies_file:
+                ydl_opts['cookiefile'] = cookies_file
+                logger.info(f"YouTube cookies fayli qo'shildi: {cookies_file}")
+            
             # User agentlar ro'yxati - detectionni chetlab o'tish uchun
             user_agents = [
                 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -966,6 +972,27 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         
         await query.edit_message_text(welcome_message, reply_markup=reply_markup)
 
+def check_and_create_cookies_file():
+    """Cookies faylini tekshirish va agar kerak bo'lsa yaratish."""
+    import os
+    
+    # Asosiy cookies fayllari
+    cookies_files = [
+        'cookies.txt',
+        os.path.join(DOWNLOADS_DIR, 'cookies.txt'),
+        os.path.join(os.getcwd(), 'cookies.txt')
+    ]
+    
+    # Mavjud cookies faylini qidirish
+    for cookies_file in cookies_files:
+        if os.path.exists(cookies_file):
+            logger.info(f"Cookies fayli topildi: {cookies_file}")
+            return cookies_file
+    
+    # Agar cookies fayli mavjud bo'lmasa, foydalanuvchiga xabar berish
+    logger.info("Cookies fayli topilmadi. YouTube uchun cookies fayli tavsiya etiladi.")
+    return None
+
 def main() -> None:
     """Botni ishga tushirish."""
     # .env fayldan bot tokenini olish
@@ -975,6 +1002,18 @@ def main() -> None:
         print("Xato: TELEGRAM_BOT_TOKEN .env faylida sozlanmagan!")
         print("Iltimos, .env faylini tahrirlang va haqiqiy bot tokenini kiriting.")
         return
+    
+    # Cookies faylini tekshirish va yaratish
+    check_and_create_cookies_file()
+    
+    # FFmpeg mavjudligini tekshirish
+    if not check_ffmpeg_available():
+        logger.warning("FFmpeg topilmadi. Yuklab olingan format eng yaxshi bo'lmasligi mumkin.")
+        print("⚠️  FFmpeg topilmadi. Yuklab olingan format eng yaxshi bo'lmasligi mumkin.")
+        print("💡 FFmpeg ni o'rnatish uchun:")
+        print("   Windows: https://ffmpeg.org/download.html dan yuklab oling")
+        print("   MacOS: brew install ffmpeg")
+        print("   Linux: sudo apt install ffmpeg")
     
     # Application yaratish va bot tokeningizni o'tkazish.
     application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
