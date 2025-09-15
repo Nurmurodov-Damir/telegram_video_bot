@@ -93,7 +93,75 @@ def get_platform_button_text(platform):
     }
     return buttons.get(platform, 'Video')
 
-def check_ffmpeg_available():
+def get_youtube_alternatives():
+    """YouTube uchun alternativ yuklab olish metodlari."""
+    return [
+        # 1. Oddiy formatlar
+        lambda opts: dict(opts, format='worst'),
+        # 2. Faqat video (bez audio)
+        lambda opts: dict(opts, format='best[height<=480]'),
+        # 3. Faqat video (past sifat)
+        lambda opts: dict(opts, format='best[height<=360]'),
+        # 4. Mobil formatlar
+        lambda opts: dict(opts, format='mp4[height<=480]'),
+    ]
+
+async def download_with_youtube_retry(url, ydl_opts, progress_message):
+    """YouTube uchun qayta urinish bilan yuklab olish."""
+    import yt_dlp
+    import asyncio
+    import random
+    
+    # YouTube alternativ metodlari
+    youtube_alternatives = get_youtube_alternatives()
+    
+    # Videoni yuklab olish
+    download_success = False
+    max_attempts = 3
+    attempt = 0
+    delay_strategies = [1, 3, 5]  # Turli darajadagi kechikishlar
+    alt_index = 0  # Alternativ metodlar indeksi
+    
+    while attempt < max_attempts and not download_success:
+        try:
+            # Har bir urinishda tasodifiy kechikish
+            if attempt > 0:
+                delay = random.choice(delay_strategies)
+                logger.info(f"YouTube uchun {delay} soniya kutish (urinish: {attempt + 1})")
+                await asyncio.sleep(delay)
+            
+            # Videoni yuklab olish
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                logger.info(f"Video yuklab olishga harakat qilinmoqda: {url}")
+                info_dict = ydl.extract_info(url, download=True)
+                video_filename = ydl.prepare_filename(info_dict)
+                logger.info(f"Video muvaffaqiyatli yuklab olindi: {video_filename}")
+            download_success = True
+            return info_dict, video_filename
+        except yt_dlp.DownloadError as e:
+            attempt += 1
+            error_msg = str(e).lower()
+            logger.error(f"Yuklab olish xatosi (urinish {attempt}): {error_msg}")
+            
+            # YouTube bot yoki cheklov xatolari
+            if ('bot' in error_msg or '429' in error_msg or "confirm you're not a bot" in error_msg or 'sign in' in error_msg) and ('youtube.com' in url or 'youtu.be' in url):
+                # Agar bu YouTube bot xatosi bo'lsa, alternativ metodlarni sinab ko'rish
+                if alt_index < len(youtube_alternatives):
+                    ydl_opts = youtube_alternatives[alt_index](ydl_opts)
+                    alt_index += 1
+                    attempt = 0  # Urinishlar sonini qayta boshlash
+                    await progress_message.edit_text(f"🎵 YouTube cheklovi uchun alternativ usul sinab ko'rilmoqda...")
+                    logger.info(f"YouTube uchun alternativ format sinab ko'rilmoqda (index: {alt_index})")
+                else:
+                    raise e  # Barcha alternativ metodlar sinab ko'rilgandan keyin xatoni qaytarish
+            elif attempt >= max_attempts:
+                raise e  # Oxirgi urinish ham muvaffaqiyatsiz bo'lsa, xatoni qaytarish
+            else:
+                # Kutish va qayta urinish
+                logger.info(f"Qayta urinish uchun kutish: {attempt + 1}/{max_attempts}")
+    
+    # Agar yuklab olinmasa, xatoni qaytarish
+    raise Exception("YouTube videoni yuklab olishda barcha urinishlar muvaffaqiyatsiz tugadi")
     """FFmpeg mavjudligini tekshirish."""
     try:
         import shutil
@@ -404,6 +472,21 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             # YouTube uchun qo'shimcha opsiyalar
             ydl_opts['youtube_include_dash_manifest'] = False
             ydl_opts['youtube_include_hls_manifest'] = False
+            
+            # YouTube formatlarini optimallashtirish
+            ydl_opts['format'] = 'bestvideo[height<=720]+bestaudio/best[height<=720]/bestvideo[height<=480]+bestaudio/best[height<=480]/best'
+            
+            # YouTube bot yoki cheklov xatolari uchun qayta urinish strategiyalari
+            youtube_alternatives = [
+                # 1. Oddiy formatlar
+                lambda opts: dict(opts, format='worst'),
+                # 2. Faqat video (bez audio)
+                lambda opts: dict(opts, format='best[height<=480]'),
+                # 3. Faqat video (past sifat)
+                lambda opts: dict(opts, format='best[height<=360]'),
+                # 4. Mobil formatlar
+                lambda opts: dict(opts, format='mp4[height<=480]'),
+            ]
         
         # Proxy sozlamalari (agar mavjud bo'lsa)
         proxy_url = os.getenv('HTTP_PROXY') or os.getenv('HTTPS_PROXY')
@@ -486,81 +569,120 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         # Jarayonni yangilash
         await progress_message.edit_text(f"{platform_sticker} Video yuklab olinmoqda...")
         
-        # YouTube uchun maxsus urinishlar soni va kechikishlar
-        max_attempts = 3 if 'youtube.com' in url or 'youtu.be' in url else 1
-        attempt = 0
-        download_success = False
-        
-        # YouTube uchun alternativ metodlar
-        youtube_alternatives = [
-            lambda opts: dict(opts, format='worst'),  # Eng past sifat
-            lambda opts: dict(opts, format='best[height<=480]'),  # 480p gacha
-            lambda opts: dict(opts, format='best[height<=360]'),  # 360p gacha
-        ]
-        
-        # Kechikish strategiyalari
-        delay_strategies = [1, 3, 5]  # Turli darajadagi kechikishlar
-        
-        alt_index = 0
-        while attempt < max_attempts and not download_success:
+        # YouTube uchun maxsus yuklab olish
+        if 'youtube.com' in url or 'youtu.be' in url:
             try:
-                # Har bir urinishda tasodifiy kechikish
-                if attempt > 0:
-                    import random
-                    delay = random.choice(delay_strategies)
-                    logger.info(f"YouTube uchun {delay} soniya kutish (urinish: {attempt + 1})")
-                    await asyncio.sleep(delay)
-                
+                info_dict, video_filename = await download_with_youtube_retry(url, ydl_opts, progress_message)
+            except Exception as e:
+                logger.error(f"YouTube yuklab olishda xatolik: {str(e)}")
+                await progress_message.edit_text(
+                    f"Kechirasiz, men YouTube videosini yuklab ololmadim.\n"
+                    f"Xato: {str(e)[:200]}..."
+                )
+                return
+        else:
+            # Boshqa platformalar uchun oddiy yuklab olish
+            try:
                 # Videoni yuklab olish
-                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                    logger.info(f"Video yuklab olishga harakat qilinmoqda: {url}")
-                    info_dict = ydl.extract_info(url, download=True)
-                    video_filename = ydl.prepare_filename(info_dict)
-                    logger.info(f"Video muvaffaqiyatli yuklab olindi: {video_filename}")
-                    
-                    # Fayl nomini tozalash (agar kerak bo'lsa)
-                    import os as os_module
-                    if os_module.path.exists(video_filename):
-                        # Tozalangan fayl nomini yaratish
-                        dir_name = os_module.path.dirname(video_filename)
-                        base_name = os_module.path.basename(video_filename)
-                        name, ext = os_module.path.splitext(base_name)
-                        
-                        # Fayl nomini tozalash
-                        clean_name = sanitize_filename(name)
-                        clean_filename = os_module.path.join(dir_name, f"{clean_name}{ext}")
-                        
-                        # Agar fayl nomi o'zgargan bo'lsa, faylni qayta nomlash
-                        if clean_filename != video_filename:
-                            try:
-                                os_module.rename(video_filename, clean_filename)
-                                video_filename = clean_filename
-                                logger.info(f"Fayl nomi tozalandi: {video_filename}")
-                            except Exception as e:
-                                logger.error(f"Fayl nomini tozalashda xatolik: {str(e)}")
-                                # Xatolik yuz bersa, original fayl nomidan foydalanamiz
-                download_success = True
-            except yt_dlp.DownloadError as e:
-                attempt += 1
-                error_msg = str(e).lower()
-                logger.error(f"Yuklab olish xatosi (urinish {attempt}): {error_msg}")
+                download_success = False
+                max_attempts = 3 if 'youtube.com' in url or 'youtu.be' in url else 1
+                attempt = 0
                 
-                # YouTube bot yoki cheklov xatolari
-                if ('bot' in error_msg or '429' in error_msg or 'confirm you\'re not a bot' in error_msg or 'sign in' in error_msg) and ('youtube.com' in url or 'youtu.be' in url):
-                    # Agar bu YouTube bot xatosi bo'lsa, alternativ metodlarni sinab ko'rish
-                    if alt_index < len(youtube_alternatives):
-                        ydl_opts = youtube_alternatives[alt_index](ydl_opts)
-                        alt_index += 1
-                        attempt = 0  # Urinishlar sonini qayta boshlash
-                        await progress_message.edit_text(f"{platform_sticker} YouTube cheklovi uchun alternativ usul sinab ko'rilmoqda...")
-                        logger.info(f"YouTube uchun alternativ format sinab ko'rilmoqda (index: {alt_index})")
-                    else:
-                        raise e  # Barcha alternativ metodlar sinab ko'rilgandan keyin xatoni qaytarish
-                elif attempt >= max_attempts:
-                    raise e  # Oxirgi urinish ham muvaffaqiyatsiz bo'lsa, xatoni qaytarish
-                else:
-                    # Kutish va qayta urinish
-                    logger.info(f"Qayta urinish uchun kutish: {attempt + 1}/{max_attempts}")
+                # YouTube uchun alternativ metodlar
+                youtube_alternatives = [
+                    lambda opts: dict(opts, format='worst'),  # Eng past sifat
+                    lambda opts: dict(opts, format='best[height<=480]'),  # 480p gacha
+                    lambda opts: dict(opts, format='best[height<=360]'),  # 360p gacha
+                ]
+                
+                # Kechikish strategiyalari
+                delay_strategies = [1, 3, 5]  # Turli darajadagi kechikishlar
+                
+                alt_index = 0
+                while attempt < max_attempts and not download_success:
+                    try:
+                        # Har bir urinishda tasodifiy kechikish
+                        if attempt > 0:
+                            import random
+                            delay = random.choice(delay_strategies)
+                            logger.info(f"Urinish uchun {delay} soniya kutish (urinish: {attempt + 1})")
+                            await asyncio.sleep(delay)
+                        
+                        # Videoni yuklab olish
+                        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                            logger.info(f"Video yuklab olishga harakat qilinmoqda: {url}")
+                            info_dict = ydl.extract_info(url, download=True)
+                            video_filename = ydl.prepare_filename(info_dict)
+                            logger.info(f"Video muvaffaqiyatli yuklab olindi: {video_filename}")
+                            
+                            # Fayl nomini tozalash (agar kerak bo'lsa)
+                            import os as os_module
+                            if os_module.path.exists(video_filename):
+                                # Tozalangan fayl nomini yaratish
+                                dir_name = os_module.path.dirname(video_filename)
+                                base_name = os_module.path.basename(video_filename)
+                                name, ext = os_module.path.splitext(base_name)
+                                
+                                # Fayl nomini tozalash
+                                clean_name = sanitize_filename(name)
+                                clean_filename = os_module.path.join(dir_name, f"{clean_name}{ext}")
+                                
+                                # Agar fayl nomi o'zgargan bo'lsa, faylni qayta nomlash
+                                if clean_filename != video_filename:
+                                    try:
+                                        os_module.rename(video_filename, clean_filename)
+                                        video_filename = clean_filename
+                                        logger.info(f"Fayl nomi tozalandi: {video_filename}")
+                                    except Exception as e:
+                                        logger.error(f"Fayl nomini tozalashda xatolik: {str(e)}")
+                                        # Xatolik yuz bersa, original fayl nomidan foydalanamiz
+                        download_success = True
+                    except yt_dlp.DownloadError as e:
+                        attempt += 1
+                        error_msg = str(e).lower()
+                        logger.error(f"Yuklab olish xatosi (urinish {attempt}): {error_msg}")
+                        
+                        # YouTube bot yoki cheklov xatolari
+                        if ('bot' in error_msg or '429' in error_msg or 'confirm you\'re not a bot' in error_msg or 'sign in' in error_msg) and ('youtube.com' in url or 'youtu.be' in url):
+                            # Agar bu YouTube bot xatosi bo'lsa, alternativ metodlarni sinab ko'rish
+                            if alt_index < len(youtube_alternatives):
+                                ydl_opts = youtube_alternatives[alt_index](ydl_opts)
+                                alt_index += 1
+                                attempt = 0  # Urinishlar sonini qayta boshlash
+                                await progress_message.edit_text(f"{platform_sticker} YouTube cheklovi uchun alternativ usul sinab ko'rilmoqda...")
+                                logger.info(f"YouTube uchun alternativ format sinab ko'rilmoqda (index: {alt_index})")
+                            else:
+                                # YouTube uchun maxsus xatolik
+                                await progress_message.edit_text(
+                                    "❌ YouTube bot tekshiruvi aniqlandi!\n\n"
+                                    "💡 Yechimlar:\n"
+                                    "1. Boshqa video manbasi tanlang (Instagram, TikTok, Vimeo, Twitter)\n"
+                                    "2. Video manzilini tekshirib ko'ring\n"
+                                    "3. Mahalliy kompyuteringizda botni ishga tushiring\n\n"
+                                    "📢 YouTube hozirda avtomatik yuklab olishni faol cheklamoqda. "
+                                    "Bu xavfsizlik chorasi bo'lib, botlarning tizimdan foydalanishini oldini oladi."
+                                )
+                                return
+                        elif attempt >= max_attempts:
+                            raise e  # Oxirgi urinish ham muvaffaqiyatsiz bo'lsa, xatoni qaytarish
+                        else:
+                            # Kutish va qayta urinish
+                            logger.info(f"Qayta urinish uchun kutish: {attempt + 1}/{max_attempts}")
+            except Exception as e:
+                logger.error(f"Yuklab olishda umumiy xatolik: {str(e)}")
+                await progress_message.edit_text(
+                    f"Kechirasiz, men videoni yuklab ololmadim.\n"
+                    f"Xato: {str(e)[:200]}..."
+                )
+                return
+        
+        # Fayl mavjudligini tekshirish
+        if not os.path.exists(video_filename):
+            await progress_message.edit_text(
+                "Kechirasiz, men videoni yuklab ololmadim.\n"
+                "Fayl yaratilmadi."
+            )
+            return
         
         # Fayl mavjudligini tekshirish
         if not os.path.exists(video_filename):
