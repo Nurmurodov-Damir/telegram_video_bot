@@ -840,16 +840,17 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             # Railway deployment uchun maxsus xabar
             railway_msg = ""
             if os.getenv('RAILWAY_ENVIRONMENT'):
-                railway_msg = "\n\nRailway deployment aniqlandi. Ehtimol, Railway IP manzillari YouTube tomonidan cheklangan."
+                railway_msg = "\n\n\x1b[34m📍 Railway deployment aniqlandi. " \
+                             "Ehtimol, Railway IP manzillari YouTube tomonidan cheklangan.\x1b[0m"
             
-            # YouTube maxsus yechimlar
-            youtube_solutions = ""
+            # YouTube uchun maxsus tavsiyalar
+            youtube_suggestions = ""
             if 'youtube.com' in url or 'youtu.be' in url:
-                youtube_solutions = "\n\n🔧 YouTube uchun tavsiyalar:\n" \
-                                  "• cookies.txt faylini qo'shing (YouTube hisobingizdan)\n" \
-                                  "• Proxy serverdan foydalaning\n" \
-                                  "• Video manzilini tekshiring\n" \
-                                  "• Boshqa video manbasidan foydalaning"
+                youtube_suggestions = "\n\n🔧 YouTube uchun tavsiyalar:\n" \
+                                   "• cookies.txt faylini qo'shing (YouTube hisobingizdan)\n" \
+                                   "• Proxy serverdan foydalaning\n" \
+                                   "• Video manzilini tekshiring\n" \
+                                   "• Boshqa video manbasidan foydalaning"
             
             await progress_message.edit_text(
                 "❌ YouTube bot tekshiruvi aniqlandi!\n\n"
@@ -860,7 +861,7 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 "📢 YouTube hozirda avtomatik yuklab olishni faol cheklamoqda. "
                 "Bu xavfsizlik chorasi bo'lib, botlarning tizimdan foydalanishini oldini oladi." +
                 railway_msg +
-                youtube_solutions +
+                youtube_suggestions +
                 "\n\n🔄 Tavsiya: Boshqa platformalardan video yuklab oling. "
                 "Instagram, TikTok va Vimeo saytlari YouTube qanday cheklovlarsiz ishlaydi."
             )
