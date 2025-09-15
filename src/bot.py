@@ -972,6 +972,14 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         
         await query.edit_message_text(welcome_message, reply_markup=reply_markup)
 
+def check_ffmpeg_available():
+    """FFmpeg mavjudligini tekshirish."""
+    try:
+        import shutil
+        return shutil.which('ffmpeg') is not None
+    except:
+        return False
+
 def check_and_create_cookies_file():
     """Cookies faylini tekshirish va agar kerak bo'lsa yaratish."""
     import os
@@ -988,6 +996,18 @@ def check_and_create_cookies_file():
         if os.path.exists(cookies_file):
             logger.info(f"Cookies fayli topildi: {cookies_file}")
             return cookies_file
+    
+    # Agar cookies fayli mavjud bo'lmasa, Railway dan olingan cookies dan foydalanish
+    cookies_content = os.getenv('COOKIES_CONTENT')
+    if cookies_content:
+        cookies_path = os.path.join(DOWNLOADS_DIR, 'cookies.txt')
+        try:
+            with open(cookies_path, 'w', encoding='utf-8') as f:
+                f.write(cookies_content)
+            logger.info(f"Cookies fayli Railway dan yaratildi: {cookies_path}")
+            return cookies_path
+        except Exception as e:
+            logger.error(f"Cookies faylini yaratishda xatolik: {str(e)}")
     
     # Agar cookies fayli mavjud bo'lmasa, foydalanuvchiga xabar berish
     logger.info("Cookies fayli topilmadi. YouTube uchun cookies fayli tavsiya etiladi.")
